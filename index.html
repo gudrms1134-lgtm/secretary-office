@@ -962,7 +962,7 @@
             <input type="password" id="keyOpenrouter" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
             <button class="pw-toggle" type="button" data-target="keyOpenrouter">보기</button>
           </div>
-          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.</div>
+          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.<br>무료 계정이면 <b>모델명 뒤에 <code>:free</code>가 붙은 모델</b>(openrouter.ai/models 에서 확인)을 지정하세요. 유료 모델을 그대로 두면 402(결제 필요) 오류가 납니다.</div>
         </div>
       </div>
 
@@ -996,7 +996,7 @@
       </div>
 
       <div class="note-box">
-        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 키를 넣으면 회의실 메시지가 실제 모델로 전달되고, 응답은 브라우저에서 직접 받아옵니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다.
+        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 데모 모드에서도 채널의 앞뒤 대화를 읽고 이어서 답합니다. 키를 넣으면 회의실 메시지가 실제 모델로 전달되고(최근 20개 대화를 함께 보냄), 응답은 브라우저에서 직접 받아옵니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다. <b>OpenRouter 무료 계정</b>에서 유료 모델을 부르면 402 오류가 나니, 그때는 모델명 뒤에 <code>:free</code>를 붙인 모델로 바꿔 주세요.
       </div>
     </div>
 
@@ -1485,18 +1485,20 @@
 
       var route = resolveRoute(agent);
       var result = null;
+      var turnOpts = Object.assign({}, opts, { turnIndex:i, turnCount:targetIds.length });
       if(route.mode === 'demo'){
         await sleep(420 + Math.random()*520);
-        result = { text: demoReply(agent, userText, opts), source:'demo', model:'데모 응답' };
+        result = { text: demoReply(agent, userText, turnOpts, history, channel), source:'demo', model:'데모 응답' };
       }else{
         try{
-          result = { text: await callModel(agent, route, history, userText, opts), source:route.mode, model:route.model };
+          result = { text: await callModel(agent, route, history, userText, turnOpts), source:route.mode, model:route.model };
         }catch(err){
           result = {
-            text: demoReply(agent, userText, opts),
+            text: demoReply(agent, userText, turnOpts, history, channel),
             source:'demo-fallback',
             model:'데모 응답',
-            error: (err && err.message) ? err.message : 'API 호출 실패'
+            error: (err && err.message) ? err.message : 'API 호출 실패',
+            errorCode: err && err.code
           };
         }
       }
@@ -1504,11 +1506,15 @@
       busy[id] = false;
       detachTyping(id);
       if(result.error){
+        var errNote = '⚠️ ' + agent.name + ' API 호출 실패(' + String(result.error).slice(0,120) + ') — 데모 응답으로 대체했습니다. ⚙️ API 설정을 확인해 주세요.';
+        if(result.errorCode === 'payment'){
+          errNote = '💳 OpenRouter 충전이 필요하거나 무료 모델(:free)로 변경해야 합니다. ⚙️ API 설정 → 모델 지정에서 "...:free" 모델을 넣으시면 바로 쓸 수 있습니다. 지금은 데모 응답으로 대체했습니다.';
+        }
         pushMessage(channel, {
           id: uid(),
           kind: 'sys',
           from: 'system',
-          text: '⚠️ ' + agent.name + ' API 호출 실패(' + String(result.error).slice(0,120) + ') — 데모 응답으로 대체했습니다. ⚙️ API 설정을 확인해 주세요.',
+          text: errNote,
           ts: Date.now()
         });
       }
@@ -1570,7 +1576,10 @@
       if(!res.ok){
         var errText = '';
         try{ var ej = await res.json(); errText = (ej.error && (ej.error.message || ej.error.code)) || ''; }catch(e){}
-        throw new Error('HTTP ' + res.status + (errText ? ' · ' + errText : ''));
+        var errObj = new Error('HTTP ' + res.status + (errText ? ' · ' + errText : ''));
+        // 402 Payment Required — OpenRouter 무료 계정에서 유료 모델을 부를 때
+        if(res.status === 402) errObj.code = 'payment';
+        throw errObj;
       }
       var data = await res.json();
       var content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
@@ -1614,7 +1623,7 @@
 
   function buildHistoryForMessages(history, agentId, userText){
     var list = history.filter(function(m){ return m.kind !== 'sys'; });
-    var recent = list.slice(-10);
+    var recent = list.slice(-20); // 최근 20개 — 긴 대화도 맥락이 끊기지 않게
     var last = recent[recent.length - 1];
     var msgs = recent.map(function(m){
       var isSelf = m.from === agentId;
@@ -1643,58 +1652,378 @@
   /* ============================================================
      데모 응답 엔진
      ============================================================ */
-  function shortTopic(text){
-    var t = String(text).replace(/@\S+/g,'').replace(/\s+/g,' ').trim();
-    t = t.replace(/(해\s*주세요|해줘요|해줘|해라|해|줘|주세요|부탁해요|부탁해|부탁드립니다)[.!?~\s]*$/,'').trim();
-    if(!t) t = '말씀하신 건';
-    if(t.length > 34) t = t.slice(0,34) + '…';
+  /* ------------------------------------------------------------
+     데모 엔진 — 채널의 앞뒤 대화를 읽고 의도별로 답한다
+     (API 키 없이 도는 기본 모드에서도 대화가 끊기지 않도록)
+     ------------------------------------------------------------ */
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  var ROLE_ANGLE = {
+    bbang:'일정·생활 실속',
+    chatgpt:'구조와 선택지',
+    gemini:'근거와 숫자',
+    claude:'문구와 리스크'
+  };
+
+  function clip(s, n){
+    var t = String(s==null?'':s).replace(/\s+/g,' ').trim();
+    if(n && t.length > n) t = t.slice(0, n) + '…';
     return t;
   }
 
-  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function shortTopic(text){
+    var t = String(text==null?'':text).replace(/@\S+/g,'').replace(/[\u201c\u201d"]/g,'').replace(/\s+/g,' ').trim();
+    t = t.replace(/^(그럼|그러면|그래서|아까|방금|근데|그런데|저기|자)\s+/,'').trim();
+    t = t.replace(/(해\s*주세요|해줘요|해줘|해라|해\s*봐|해|줘|주세요|부탁해요|부탁해|부탁드립니다|할까요|할까|될까요|될까|인가요|일까요|일까|이야|야|냐)[.!?~,\s]*$/,'').trim();
+    t = t.replace(/^[\s"'「『]+|[\s"'」』]+$/g,'').replace(/[?!.~,]+$/,'').trim();
+    return t.length > 34 ? t.slice(0,34) + '…' : t;
+  }
 
-  function demoReply(agent, text, opts){
-    var topic = shortTopic(text);
-    var casual = !!(opts && opts.casual);
-    var head = '네, 대장님! 실행하겠습니다.';
+  function isNoiseTopic(t){
+    var s = String(t||'').replace(/[\s?!.~,"'()~…]/g,'');
+    if(s.length < 2) return true;
+    return /^(응|응응|어|어어|네|네네|예|넵|오케이|ok|좋아|좋지|그래|그럼|맞아|맞지|아니|아뇨|싫어|말고|다시|계속|그걸로|그거|이거|저거|뭐|뭐야|왜|왜요|그렇게|해봐|굿|고마워|웅|ㅇㅇ|ㅇㅋ|ㅋㅋ|ㅎㅎ)$/.test(s);
+  }
 
-    if(casual){
-      var casuals = {
-        bbang: ['네, 대장님! 부르셨습니까. 필요한 것만 말씀해 주시면 바로 움직이겠습니다.', '네, 대장님! 여기 있습니다. 오늘은 무엇부터 챙길까요?'],
-        chatgpt: ['네, 대장님! 준비돼 있습니다. 정리할 거리 있으면 바로 던져 주십시오.', '네, 대장님! 기획이든 정리든 말씀만 주십시오.'],
-        gemini: ['네, 대장님! 조사할 거리 있으면 바로 달려가겠습니다. ✨', '네, 대장님! 궁금한 것 하나만 주셔도 근거까지 찾아오겠습니다.'],
-        claude: ['네, 대장님! 문서든 코드든 말씀만 주십시오.', '네, 대장님! 바로 착수하겠습니다. 범위만 알려주십시오.']
-      };
-      return pick(casuals[agent.id] || ['네, 대장님! 말씀하십시오.']);
+  /* 짧은 맞장구·인사는 '주제'가 아니라 대화의 이음새로 본다 */
+  function isNoiseLine(text){
+    var t = String(text||'').replace(/[\s?!.~,]/g,'');
+    if(!t) return true;
+    if(t.length <= 12 && /^(응|어|네|예|넵|오케이|ok|좋아|좋지|그래|그럼|맞아|맞지|아니|아뇨|싫|말고|다시|계속|그걸로|그렇게|해봐|고고|굿|ㅇㅇ|ㅇㅋ|안녕|하이|뭐해|있어)/.test(t)) return true;
+    return false;
+  }
+
+  var RE_LIGHT = /(커피|밥|점심|저녁|야식|술|맥주|소주|산책|쉬자|쉴까|쉴까|놀러|영화|드라마|음악|날씨|여행|드라이브|간식|치킨|떡볶이|고기)/;
+
+  function isLight(text){ return RE_LIGHT.test(String(text||'')); }
+
+  /* 채널 대화에서 '지금 무슨 얘기 중인가'를 뽑아낸다 */
+  function analyzeContext(history, agentId, currentText){
+    var msgs = (history||[]).filter(function(m){ return m.kind !== 'sys'; });
+    var cur = msgs[msgs.length-1];
+    var prev = msgs;
+    if(cur && cur.from === 'boss' && String(cur.text||'').trim() === String(currentText||'').trim()){
+      prev = msgs.slice(0, -1);
+    }
+    var boss = prev.filter(function(m){ return m.from === 'boss'; });
+    var self = prev.filter(function(m){ return m.from === agentId; });
+
+    var topic = '', topicFrom = '';
+    for(var i=boss.length-1;i>=0;i--){
+      if(isNoiseLine(boss[i].text)) continue;
+      var c1 = shortTopic(boss[i].text);
+      if(!isNoiseTopic(c1)){ topic = c1; topicFrom = 'boss'; break; }
+    }
+    if(!topic){
+      for(var j=self.length-1;j>=0;j--){
+        var c2 = shortTopic(self[j].text);
+        if(!isNoiseTopic(c2)){ topic = c2; topicFrom = 'self'; break; }
+      }
     }
 
-    var body = '';
-    if(agent.id === 'bbang'){
-      body = pick([
-        '· ' + topic + ' — 제가 일정과 서류까지 한 번에 챙기겠습니다.\n· 오늘 안에 1차 정리본을 이 채널에 올리고, 확인 필요하면 그때 여쭙겠습니다.',
-        '· ' + topic + ' — 순서대로 정리해 오늘 안에 착수하겠습니다.\n· 진행은 단계마다 이 지휘실에 보고드리겠습니다.'
-      ]);
-      body += '\n\n기준으로 삼을 마감이나 예산만 알려주시면 그대로 맞추겠습니다.';
-    }else if(agent.id === 'chatgpt'){
-      body = pick([
-        '· 목표: ' + topic + '\n· 1) 핵심 항목 3개로 쪼개기  2) 우선순위 표시  3) 실행 순서 확정\n· 정리본은 표 형태로 올려드리겠습니다.',
-        '· ' + topic + ' → 안건 구조화부터 하겠습니다.\n· 결정이 필요한 지점과 그냥 진행해도 되는 지점을 나눠서 정리하겠습니다.'
-      ]);
-      body += '\n\n먼저 결론부터 볼까요, 근거부터 볼까요?';
-    }else if(agent.id === 'gemini'){
-      body = pick([
-        '· ' + topic + ' — 공식 자료 위주로 조사하겠습니다.\n· 근거 링크와 숫자를 함께 정리해 30분 안에 보고드리겠습니다.',
-        '· ' + topic + ' — 비교 기준 3개를 잡고 최신 자료로 확인하겠습니다.\n· 출처가 약한 내용은 따로 표시해 두겠습니다.'
-      ]);
-      body += '\n\n조사 범위를 국내로 좁출까요, 해외까지 볼까요?';
+    var lastBoss = boss.length ? boss[boss.length-1] : null;
+    // 이번 턴에 이미 답한 '다른' 비서 (같은 메시지에 @all 로 줄줄이 답할 때)
+    var turnOthers = [];
+    var lastBossFull = null;
+    for(var k=msgs.length-1;k>=0;k--){ if(msgs[k].from === 'boss'){ lastBossFull = msgs[k]; break; } }
+    if(lastBossFull){
+      var idx = msgs.lastIndexOf(lastBossFull);
+      turnOthers = msgs.slice(idx+1).filter(function(m){ return m.from !== 'boss' && m.from !== agentId; });
+    }
+
+    return {
+      topic: topic,
+      topicFrom: topicFrom,
+      prevBoss: boss,
+      prevSelf: self,
+      total: prev.length,
+      bossCount: boss.length,
+      turnOthers: turnOthers,
+      lastBoss: lastBoss,
+      lastSelf: self.length ? self[self.length-1] : null
+    };
+  }
+
+  function kpiLine(){
+    var c = { todo:0, doing:0, done:0 };
+    (state.tasks||[]).forEach(function(t){ if(c[t.status] != null) c[t.status]++; });
+    if(!(c.todo + c.doing + c.done)) return '작업실은 아직 비어 있습니다';
+    return '작업실은 대기 ' + c.todo + '·진행 ' + c.doing + '·완료 ' + c.done + '건입니다';
+  }
+
+  function detectIntent(raw, ctx, opts){
+    var t = String(raw||'').toLowerCase().replace(/\s+/g,' ').trim();
+    var bare = t.replace(/[\s?!.~,]/g,'');
+    if(!bare) return 'talk';
+
+    // 1) 앞 대화를 되짚는 질문 — 반드시 실제 발화를 인용해야 한다
+    if(/(아까|방금|조금 전|전에|앞서|내가 뭐|뭐라고 ?했|무슨 ?말(을|씀)? ?(했|하)|내 ?말 ?(기억|했)|기억나|기억 ?하(고|니|세요)?\??)/.test(t)) return 'recall';
+
+    // 2) 비서실 자체(모드·초기화·기억)에 대한 지적/질문
+    if(/(초기화|리셋|새로고침|날아갔|사라졌|지워졌|데모 ?모드|데모야|데모인|api ?키|apikey|키 ?없|키 ?넣|키 ?연결|시뮬|로컬 ?모드|똑같은 말|같은 말만|복붙|템플릿|기계적|왜 자꾸|대화가 안|맥락|컨텍스트|이어지(는|지|잖|질)|연결이 ?안|진짜 ?모델|실제 ?모델|기억 ?못|기억을 ?못|잊어버|까먹)/.test(t)) return 'meta';
+
+    // 3) 짧은 후속 대답("응 그걸로 해", "아니 말고", "다시") — 지시보다 먼저 본다
+    var strictAck = /^((응|응응|어|네|예|넵|오케이|ok|좋아|좋지|그래|그럼|맞아|맞지|아니|아뇨|싫어|말고|다시|계속|그걸로|그렇게|해봐|고고|굿|ㅇㅇ|ㅇㅋ|왜|왜요)[\s,.!~]*)+((그걸로|그렇게|해|하자|해줘|가자|좋아|고고|말고|거야|거지|요)[\s,.!~]*)*$/;
+    if(strictAck.test(t) && t.replace(/[\s?!.~,]/g,'').length <= 14) return 'ack';
+    if(/^(아니|싫|말고|그건 ?아니|다시|처음부터)/.test(t)) return 'ack';
+
+    // 4) 명확한 작업 지시
+    if(isInstruction(t) || /(만들|작성|보내|찾아|정리|정리해|확인|계산|세팅|셋팅|준비|잡아|등록|추가|삭제|고쳐|수정|테스트|검토|비교|조사|스케줄|예약|리마인드|알려|보여|뽑아|써줘|적어|넣어|올려|바꿔|켜줘|꺼줘|세워)/.test(t)) return 'instruct';
+
+    // 5) 인사 / 호출 / 안부
+    if(/^(안녕|안녕하|하이|헬로|반가|굿모닝|굿밤|좋은 ?아침|여보세요|hello|hi|hey)/.test(t)) return 'greet';
+    if(/^(있어|있나|있습니까|계세요|계십니까|부르|호출)|(뭐해|뭐 ?하고 ?있|뭐하|바쁘|대기 ?중|듣고 ?있|집에 ?있)/.test(t)) return 'greet';
+
+    // 6) 짧은 후속 대답(그 밖의 형태)
+    if(/^(응|응응|어|어어|네|네네|예|넵|오케이|ok|okay|좋아|좋지|그래|그만|맞아|맞지|계속|해봐|고고|굿|ㅇㅇ|ㅇㅋ|ㅋㅋ|ㅎㅎ|고마워|땡큐|왜|왜요)/.test(bare)) return 'ack';
+
+    // 7) 질문 / 의견 묻기
+    if(/(\?|어때|어떻|어떤|할까|할래|될까|인가|인지|뭐야|뭐지|뭐가|무엇|알아|아나|왜|어디|언제|누구|얼마|몇|어느|가능|괜찮|좋을까|맞나|차이|뜻|방법)/.test(t)) return 'ask';
+
+    return 'talk';
+  }
+
+  /* 이번 턴에 앞서 답한 비서와 겹치지 않게 각도를 밝힌다 */
+  function crossRef(agent, ctx){
+    if(!ctx.turnOthers.length) return '';
+    var prev = ctx.turnOthers[ctx.turnOthers.length-1];
+    var pa = AGENT_MAP[prev.from];
+    var name = pa ? pa.short : '앞 비서';
+    return '방금 ' + name + ' 쪽 말과 겹치지 않게, 저는 ' + (ROLE_ANGLE[agent.id] || '제 담당') + ' 쪽만 보태겠습니다.\n\n';
+  }
+
+  function offerLine(agent){
+    return {
+      bbang:'오늘 일정·생활 쪽에서 챙길 것부터 훑어 드릴까요?',
+      chatgpt:'정리할 안건을 던져 주시면 목차와 순서로 바로 잡겠습니다.',
+      gemini:'확인할 자료가 있으면 근거와 숫자까지 붙여 오겠습니다.',
+      claude:'문서나 코드 초안이 필요하면 한 장부터 잡아 올리겠습니다.'
+    }[agent.id] || '무엇부터 볼까요?';
+  }
+
+  /* --- 인사 / 호출 --- */
+  function replyGreet(agent, ctx, channel){
+    var heads = {
+      bbang: ['네, 대장님! 여기 있습니다.', '네, 대장님, 듣고 있습니다.', '부르셨습니까, 대장님.'],
+      chatgpt: ['네, 대장님! 대기하고 있습니다.', '여기 있습니다, 대장님.'],
+      gemini: ['네, 대장님! 대기 중입니다.', '부르셨습니까, 대장님.'],
+      claude: ['네, 대장님, 여기 있습니다.', '듣고 있습니다, 대장님.']
+    };
+    var lines = [pick(heads[agent.id] || ['네, 대장님!'])];
+    if(ctx.topic){
+      lines.push('아까 ' + channel + '에서 "' + clip(ctx.topic, 30) + '" 말씀 주신 건 아직 결론 전이라, 그 얘기부터 이어서 가면 됩니다.');
     }else{
-      body = pick([
-        '· ' + topic + ' — 문서 초안부터 잡겠습니다.\n· 문장은 짧게, 군더더기 없이 정리해 바로 쓰실 수 있게 올리겠습니다.',
-        '· ' + topic + ' — 코드/문서 형태는 붙여 넣으면 바로 동작하도록 준비하겠습니다.\n· 먼저 초안 한 장을 올리고 방향을 확인받겠습니다.'
-      ]);
-      body += '\n\n말투는 담백하게 갈까요, 조금 더 단단하게 갈까요?';
+      lines.push('지금 ' + channel + '에는 새로 잡힌 안건이 없고, ' + kpiLine() + '.');
     }
-    return head + '\n\n' + body;
+    lines.push(offerLine(agent));
+    return lines.join('\n');
+  }
+
+  /* --- 앞 대화 되짚기("아까 내가 뭐라고 했어?") --- */
+  function replyRecall(agent, ctx, channel){
+    var boss = ctx.prevBoss;
+    if(!boss.length){
+      return '네, 대장님. 이 채널에서 대장님 말씀은 방금 것이 처음입니다. 그 첫 마디부터 차례로 쌓고 있으니, 다음 말씀도 앞의 것과 이어서 받겠습니다.';
+    }
+    var lines = ['네, 대장님, 기억합니다. ' + channel + '에서 이렇게 말씀하셨습니다.'];
+    boss.slice(-3).forEach(function(m){
+      lines.push('· ' + fmtClock(m.ts) + ' — "' + clip(m.text, 70) + '"');
+    });
+    var tails = {
+      bbang: '그 흐름대로 오늘 순서를 다시 잡아 올리겠습니다. 어디부터 볼까요?',
+      chatgpt: '그 말씀들을 한 장으로 묶어 정리해 드릴까요?',
+      gemini: '그 내용에서 확인이 필요한 숫자나 근거가 있으면 이어서 찾아오겠습니다.',
+      claude: '그 기준에 맞춰 문구나 초안을 다듬어 올리겠습니다.'
+    };
+    lines.push(tails[agent.id] || '이어서 말씀해 주십시오.');
+    return lines.join('\n');
+  }
+
+  /* --- 비서실 자체에 대한 지적/질문 --- */
+  function replyMeta(agent, ctx, raw, channel){
+    var t = String(raw).toLowerCase();
+    var isReset = /(초기화|리셋|새로고침|날아|사라|지워)/.test(t);
+    var isSame = /(똑같|같은 말|복붙|템플릿|기계|왜 자꾸|재미없|노잼)/.test(t);
+    var isMem = /(기억|잊|까먹|맥락|앞선)/.test(t);
+    var isDemo = /(데모|api|키|모델|시뮬|로컬|진짜|실제)/.test(t);
+    var lines = [];
+
+    if(isReset || isSame){
+      lines.push('아닙니다, 대장님. ' + channel + ' 대화는 이 브라우저(localStorage)에 남아 있어서 새로고침해도 그대로입니다. 지금 이 채널에 대장님 말씀 ' + ctx.bossCount + '개와 비서 답변 ' + (ctx.total - ctx.bossCount) + '개가 그대로 붙어 있습니다.');
+    }
+    if(isSame){
+      lines.push('솔직히 말씀드리면, 예전엔 입력이 뭐든 "실행하겠습니다"만 돌려주는 고정 응답이라 초기화된 것처럼 보였습니다. 방금 그 엔진을 앞뒤 맥락을 읽는 쪽으로 바꿨습니다.');
+    }
+    if(isMem && !isReset && !isSame){
+      var ref = ctx.topic ? '"' + clip(ctx.topic, 30) + '"' : '바로 앞 대화';
+      lines.push('기억합니다, 대장님. 이 채널에서 가장 최근에 짚어 둔 건 ' + ref + '입니다. 그 앞의 말씀도 순서대로 불러 드릴 수 있습니다.');
+    }
+    if(isDemo || (!isReset && !isSame && !isMem)){
+      lines.push('지금은 API 키 없이 도는 로컬 시뮬레이션(데모) 모드입니다. 답은 제가 채널의 앞뒤 대화를 읽고 규칙으로 짜서 드리고 있고, 실제 모델처럼 매번 새로 추론하지는 않습니다.');
+      lines.push('⚙️ API 설정에 OpenRouter 키를 넣으면 네 명 모두 실제 모델로 붙습니다. 무료로 쓰시려면 모델명 뒤에 ":free"가 붙은 모델을 지정하시면 됩니다.');
+    }else if(lines.length){
+      lines.push('참고로 지금 응답은 API 키 없이 도는 로컬 시뮬레이션 모드에서 나온 것입니다. 키를 넣으면 실제 모델로 바뀝니다.');
+    }
+    var tails = {
+      bbang: '확인해 보시려면 아무 말이나 이어서 던져 주십시오. 앞뒤로 이어서 받겠습니다.',
+      chatgpt: '계속 쓰시면서 어긋나는 부분이 보이면 바로 말씀해 주십시오. 그 자리에서 고치겠습니다.',
+      gemini: '어느 시점부터 어긋났는지 알려주시면 그 지점부터 다시 짚어 오겠습니다.',
+      claude: '문장이 어색하거나 겹치는 부분이 있으면 짚어 주십시오. 그대로 다듬겠습니다.'
+    };
+    lines.push(tails[agent.id] || '이어서 말씀해 주십시오.');
+    return lines.join('\n');
+  }
+
+  /* --- 명확한 작업 지시 --- */
+  function replyInstruct(agent, ctx, raw, channel){
+    var topic = shortTopic(raw);
+    if(isNoiseTopic(topic) || !topic) topic = ctx.topic || '말씀하신 건';
+    var lines = ['네, 대장님! 실행하겠습니다.', ''];
+    var vague = /(이거|그거|저거|이건|그건|아까|방금|그 ?부분|저 ?부분|위에|아래|앞서)/.test(raw);
+    if(vague && ctx.topic && ctx.topicFrom === 'boss' && clip(ctx.topic, 20) !== clip(topic, 20)){
+      lines.push('앞서 말씀하신 "' + clip(ctx.topic, 26) + '" 건과 묶어서 처리하겠습니다.');
+      lines.push('');
+    }
+    var body = {
+      bbang: '· ' + clip(topic, 34) + ' — 일정·서류·생활 쪽까지 제가 한 번에 챙기겠습니다.\n· 오늘 안에 1차 결과를 이 ' + channel + '에 올리고, 확인이 필요하면 그때 한 번만 여쭙겠습니다.\n\n기준으로 삼을 마감이나 예산만 알려주시면 그대로 맞추겠습니다.',
+      chatgpt: '· ' + clip(topic, 34) + ' → 목표를 한 줄로 세우고 항목 3개로 쪼개겠습니다.\n· 우선순위와 실행 순서를 붙여 표로 올리겠습니다.\n\n먼저 결론부터 볼까요, 근거부터 볼까요?',
+      gemini: '· ' + clip(topic, 34) + ' — 공식 자료 위주로 확인하겠습니다.\n· 근거 링크와 숫자를 함께 정리해 보고드리고, 출처가 약한 건 따로 표시하겠습니다.\n\n조사 범위를 국내로 좁출까요, 해외까지 볼까요?',
+      claude: '· ' + clip(topic, 34) + ' — 문서 초안부터 잡겠습니다.\n· 문장은 짧게, 군더더기 없이 정리해 바로 쓰실 수 있게 올리겠습니다.\n\n말투는 담백하게 갈까요, 조금 더 단단하게 갈까요?'
+    };
+    lines.push(body[agent.id] || ('· ' + clip(topic, 34) + ' — 순서대로 정리해 착수하겠습니다.'));
+    return lines.join('\n');
+  }
+
+  /* --- 짧은 후속 대답("응", "아니", "다시", "왜?") --- */
+  function replyAck(agent, ctx, raw, channel){
+    var t = String(raw).replace(/\s/g,'');
+    var isNo = /(아니|아뇨|싫|말고|노|그건아니|안돼)/.test(t);
+    var isAgain = /(다시|처음부터|새로|리셋|재정리)/.test(t);
+    var isWhy = /^(왜|왜요|왜\?|이유)/.test(t) || /(왜그래|왜요)/.test(t);
+    var topic = ctx.topic || '아까 얘기';
+
+    if(isWhy){
+      return '이유는 "' + clip(topic, 26) + '"를 조건 확인 없이 밀면 되돌리는 비용이 크기 때문입니다. 기준 하나만 정해지면 바로 움직이겠습니다.\n\n' + (
+        agent.id === 'bbang' ? '마감과 예산 중 어느 쪽이 더 급합니까?' :
+        agent.id === 'chatgpt' ? '속도와 확실성 중 어느 쪽을 먼저 볼까요?' :
+        agent.id === 'gemini' ? '비교 기준을 가격·기간 중 어느 쪽으로 잡을까요?' :
+        '조건을 문서로 못 박아 둘까요?'
+      );
+    }
+    if(isNo){
+      var alts = {
+        bbang: '대신 오늘 급한 일정부터 처리하는 쪽으로 돌리겠습니다.',
+        chatgpt: '대신 선택지를 두 개로 줄여 다시 올리겠습니다.',
+        gemini: '대신 비교 기준을 바꿔 다른 자료로 확인하겠습니다.',
+        claude: '대신 원래 조건을 다시 확인하는 쪽으로 정리하겠습니다.'
+      };
+      return '알겠습니다, 대장님. "' + clip(topic, 26) + '" 쪽은 접고 다른 각도로 가겠습니다.\n' + (alts[agent.id] || '다른 방향으로 잡겠습니다.') + '\n\n어느 쪽부터 볼까요?';
+    }
+    if(isAgain){
+      return '처음부터 다시 잡겠습니다, 대장님. 방금까지 나온 건 잠시 옆에 두고 "' + clip(topic, 26) + '"만 다시 정리해 올리겠습니다.\n\n' + (
+        agent.id === 'bbang' ? '오늘 안에 끝낼 수 있는 범위로 줄여 볼까요?' :
+        agent.id === 'chatgpt' ? '한 장 요약부터 다시 볼까요?' :
+        agent.id === 'gemini' ? '출처를 더 엄격하게 걸러 볼까요?' :
+        '분량을 줄여 다시 쓸까요?'
+      );
+    }
+    var steps = {
+      bbang: '그럼 "' + clip(topic, 26) + '" 기준으로 오늘 순서부터 다시 잡겠습니다.',
+      chatgpt: '그럼 "' + clip(topic, 26) + '" 기준으로 정리본을 바로 이어서 만들겠습니다.',
+      gemini: '그럼 "' + clip(topic, 26) + '" 기준으로 근거 자료를 이어서 확인하겠습니다.',
+      claude: '그럼 "' + clip(topic, 26) + '" 기준으로 초안을 이어서 다듬겠습니다.'
+    };
+    var qs = {
+      bbang: '첫 단계는 제가 정한 순서대로 가도 될까요?',
+      chatgpt: '목차부터 보시겠습니까, 결론부터 보시겠습니까?',
+      gemini: '국내 자료부터 볼까요?',
+      claude: '문체는 지금 그대로 갈까요?'
+    };
+    if(isLight(topic)){
+      var light = {
+        bbang: '네, 그럼 그렇게 하시죠. "' + clip(topic, 24) + '" 다녀오시는 동안 나머지 정리는 제가 해 두겠습니다.',
+        chatgpt: '네, 좋습니다. 잠깐 쉬는 시간도 일정에 넣어 두면 오히려 오래 갑니다.',
+        gemini: '네, 좋습니다. 나가실 시간대만 정해 주시면 준비물을 챙겨 드리겠습니다.',
+        claude: '네, 그렇게 하시죠. 돌아오시면 정리할 문서부터 보여 드리겠습니다.'
+      };
+      return light[agent.id] || '네, 그렇게 하시죠.';
+    }
+    return '네, 대장님. ' + (steps[agent.id] || '이어서 가겠습니다.') + '\n\n' + (qs[agent.id] || '이대로 진행할까요?');
+  }
+
+  /* --- 질문 / 의견 묻기 --- */
+  function replyAsk(agent, ctx, raw, channel){
+    var q = shortTopic(raw);
+    var topic = (!isNoiseTopic(q) && q) ? q : (ctx.topic || '말씀하신 건');
+    var v = ctx.turnOthers.length % 2;
+    if(isLight(topic)){
+      var light = {
+        bbang: '· "' + clip(topic, 26) + '" — 좋습니다. 오늘 남은 일정은 제가 보고 있으니 편하게 다녀오셔도 됩니다.\n· 나가실 시간만 정해 주시면 앞뒤로 볼일을 붙여 드리겠습니다.',
+        chatgpt: '"' + clip(topic, 26) + '" — 좋은 생각입니다. 쉬는 시간도 일정에 넣어 두면 오히려 오래 갑니다.\n\n몇 시로 잡을까요?',
+        gemini: '"' + clip(topic, 26) + '" — 괜찮습니다. 시간대만 정해 주시면 그 기준으로 준비할 것을 옮아 두겠습니다.\n\n어느 쪽이 편하십니까?',
+        claude: '"' + clip(topic, 26) + '" — 좋습니다. 다녀오시는 동안 정리할 문서는 제가 잡아 두겠습니다.\n\n지금 쓰실 문서가 있습니까?'
+      };
+      return light[agent.id] || '좋습니다, 대장님.';
+    }
+    var bodies = {
+      bbang: [
+        '· "' + clip(topic, 30) + '" — 제 판단은 일정·생활 쪽 리스크부터 보는 게 낫습니다.\n· 오늘 안에 손이 닿는 일인지, 돈이 얼마 나가는지 두 가지만 정해지면 결론이 납니다.\n\n급한 건 시간입니까, 비용입니까?',
+        '· "' + clip(topic, 30) + '" — 생활 쪽으로 보면 이미 나가는 돈과 앞으로 나갈 돈을 나눠 봐야 합니다.\n· 고정지출에 붙는 항목이면 한 번 정리해 두는 게 오래 갑니다.\n\n제가 항목별로 표를 잡아 볼까요?'
+      ],
+      chatgpt: [
+        '· "' + clip(topic, 30) + '" — 선택지를 ① 바로 진행 ② 조건 확인 후 진행 ③ 보류로 나눠 보겠습니다.\n· 장단점은 속도와 확실성에서 갈립니다.\n\n어느 쪽으로 기울고 계십니까?',
+        '· "' + clip(topic, 30) + '" — 먼저 목표를 한 줄로 고정하고, 그다음 단계를 3개로 쪼개는 게 안전합니다.\n· 결정이 필요한 지점과 그냥 밀어도 되는 지점을 나눠 정리하겠습니다.\n\n결론부터 정리할까요?'
+      ],
+      gemini: [
+        '· "' + clip(topic, 30) + '" — 숫자로 비교할 수 있는 기준부터 잡겠습니다(가격·기간·조건).\n· 근거는 공식 자료 위주로 확인해 출처와 함께 붙이겠습니다.\n\n국내 자료만 볼까요, 해외 사례도 볼까요?',
+        '· "' + clip(topic, 30) + '" — 시세나 조건은 확인 시점에 따라 달라지니 최신 자료로 다시 짚겠습니다.\n· 비교는 같은 기준끼리 해야 해서 표를 하나로 통일하겠습니다.\n\n비교 대상은 어디까지 볼까요?'
+      ],
+      claude: [
+        '· "' + clip(topic, 30) + '" — 지금 결정의 리스크는 조건이 흐릿한 채로 진행되는 것입니다.\n· 기한·예외·책임 범위를 한 줄씩 못 박아 두면 되돌리기 쉽습니다.\n\n초안을 문서로 잡아 둘까요?',
+        '· "' + clip(topic, 30) + '" — 문구를 다듬으면 같은 내용도 훨씬 분명해집니다.\n· 짧게 쓰되 빠지면 안 되는 조건은 따로 표시해 두겠습니다.\n\n상대가 읽을 문서입니까, 제가 기억할 메모입니까?'
+      ]
+    };
+    var arr = bodies[agent.id] || ['· "' + clip(topic, 30) + '" — 확인해서 보고드리겠습니다.'];
+    return arr[v % arr.length];
+  }
+
+  /* --- 그 밖의 잡담: 받아주고 맥락에 붙인다 --- */
+  function replyTalk(agent, ctx, raw, channel){
+    var q = shortTopic(raw);
+    var topic = (!isNoiseTopic(q) && q) ? q : (ctx.topic || '방금 말씀');
+    var views = {
+      bbang: '"' + clip(topic, 30) + '" — 생활 쪽으로 보면 오늘 처리할 것과 미룰 것을 나누는 게 먼저입니다.',
+      chatgpt: '"' + clip(topic, 30) + '" — 흩어진 얘기로 보이니 한 장으로 정리해 두면 다음이 빨라집니다.',
+      gemini: '"' + clip(topic, 30) + '" — 확인할 숫자가 있으면 지금 짚어 두겠습니다.',
+      claude: '"' + clip(topic, 30) + '" — 문장으로 남겨 둘 만한 얘기입니다. 짧게 정리해 둘까요?'
+    };
+    var qs = {
+      bbang: '이 얘기, 오늘 안에 결론 내야 하는 건가요?',
+      chatgpt: '이 건은 어디에 적어 둘까요?',
+      gemini: '숫자까지 확인할까요?',
+      claude: '메모로 남겨 둘까요?'
+    };
+    return '말씀하신 ' + (views[agent.id] || '"' + clip(topic, 30) + '" — 듣고 있습니다.') + '\n\n' + (qs[agent.id] || '더 말씀해 주십시오.');
+  }
+
+  function demoReply(agent, text, opts, history, channel){
+    opts = opts || {};
+    channel = channel || state.channel;
+    var raw = String(text==null?'':text).trim();
+    var ctx = analyzeContext(history, agent.id, raw);
+    var intent = detectIntent(raw, ctx, opts);
+    if(opts.casual && intent === 'talk') intent = 'greet';
+
+    var pre = crossRef(agent, ctx);
+    var body;
+    if(intent === 'recall') body = replyRecall(agent, ctx, channel);
+    else if(intent === 'meta') body = replyMeta(agent, ctx, raw, channel);
+    else if(intent === 'greet') body = replyGreet(agent, ctx, channel);
+    else if(intent === 'instruct') body = replyInstruct(agent, ctx, raw, channel);
+    else if(intent === 'ack') body = replyAck(agent, ctx, raw, channel);
+    else if(intent === 'ask') body = replyAsk(agent, ctx, raw, channel);
+    else body = replyTalk(agent, ctx, raw, channel);
+    return pre + body;
   }
 
   /* ============================================================
@@ -1834,9 +2163,11 @@
   function renderStatusIfVisible(){
     if(view === 'status'){
       // 상태 카드만 갱신 (입력 중 포커스 유지)
-      var scrollTop = $('.view-scroll', $('[data-view="status"]')).scrollTop;
+      var box = $('.view[data-view="status"] .view-scroll');
+      var scrollTop = box ? box.scrollTop : 0;
       renderStatus();
-      $('.view-scroll', $('[data-view="status"]')).scrollTop = scrollTop;
+      box = $('.view[data-view="status"] .view-scroll');
+      if(box) box.scrollTop = scrollTop;
     }
   }
 
