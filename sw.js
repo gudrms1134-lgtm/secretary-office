@@ -1,6 +1,7 @@
 /* 형근님 비서실 — Service Worker
-   네트워크 우선 + 오프라인 캐시 폴백 (Android Chrome '앱 설치' 조건 충족용) */
-const CACHE = 'secretary-office-v7';
+   네트워크 우선 + 오프라인 캐시 폴백 (Android Chrome '앱 설치' 조건 충족용)
+   v8: 4명 비서를 분야별 실전 전문가 버전으로 개편(직함·전문 프롬프트·답변 규칙) */
+const CACHE = 'secretary-office-v8';
 const ASSETS = [
   './',
   './index.html',
