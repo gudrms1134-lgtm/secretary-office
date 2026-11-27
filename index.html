@@ -2221,6 +2221,10 @@
       var st = statusOf(a.id);
       var stat = state.stats[a.id] || {};
       var srcLabel = route.mode === 'demo' ? '데모 모드' : route.label + ' · ' + route.model;
+      // 지정 모델이 단종·혼잡으로 실패해 다른 모델이 답했다면 그 사실도 함께 보여준다
+      if(route.mode !== 'demo' && stat.model && String(stat.source||'').indexOf('demo') !== 0 && stat.model !== route.model){
+        srcLabel += ' → ' + stat.model;
+      }
       var acts = '<div class="agent-actions">' +
         '<button class="mini-btn" data-agent-msg="'+a.id+'">💬 지목해서 지시</button>' +
         (route.mode === 'demo' ? '<button class="mini-btn primary" data-agent-setup="1">🔑 키 연결</button>' : '<button class="mini-btn" data-agent-test="'+a.id+'">🔌 테스트</button>') +
