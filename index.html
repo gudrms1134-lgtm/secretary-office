@@ -1088,7 +1088,8 @@
     stats:{},
     unread:0,
     seeded:false,
-    guideNote:false
+    guideNote:false,
+    guideNoteV2:false
   };
   var view = 'room';
   var busy = {};        // agentId -> true (응답 생성 중)
@@ -1121,7 +1122,8 @@
           settings: state.settings,
           stats: state.stats,
           seeded: state.seeded,
-          guideNote: state.guideNote
+          guideNote: state.guideNote,
+          guideNoteV2: state.guideNoteV2
         }));
       }catch(e){ /* 저장 불가(사생활 모드 등) — 조용히 무시 */ }
     }, 120);
@@ -1149,6 +1151,7 @@
       if(typeof d.channel === 'string' && CHANNELS.indexOf(d.channel) >= 0) state.channel = d.channel;
       state.seeded = !!d.seeded;
       state.guideNote = !!d.guideNote;
+      state.guideNoteV2 = !!d.guideNoteV2;
       return true;
     }catch(e){ return false; }
   }
@@ -1188,19 +1191,35 @@
      ============================================================ */
   var GUIDE_NOTE_ID = 'guide-boss-rules-v1';
   var GUIDE_NOTE_TITLE = '📌 대장님 맞춤 운영 규칙';
+  /* v5 추가 — 허풍·거짓 완료 금지 (규칙 본문과 기존 메모 보강에 같이 쓴다) */
+  var GUIDE_NOTE_NO_FAKE = '· 허풍 금지 — 검색·로그인·클릭 도구가 없는 텍스트 AI다. 실제로 안 한 적립·응모·전달을 "완료했다"고 말하지 말고 실행 전략·체크리스트·초안만\n' +
+    '· 제외 대상: 신한포인트(금지), 토스·카카오·당근 같은 모바일 앱 전용 적립(웹 불가)';
   var GUIDE_NOTE_BODY = '· 사업자 등록 불가 — 현금 과다 지출·고위험 투자·개인정보 제3자 제공·약관 위반 금지\n' +
     '· 무비용 → 저비용 → 고효율·실속 순으로 판단\n' +
     '· 모바일 앱 전용 이벤트보다 웹에서 바로 되는 합법적 포인트·공공기관 경품·체험단·생활 절약·자동화 아이디어\n' +
     '· 실제 실행은 피클 "빵근비서"에게 복사해 넘김 → 대상·조건·체크리스트·보낼 초안까지 구체적으로\n' +
+    GUIDE_NOTE_NO_FAKE + '\n' +
     '· 말투: 결론부터 3~6줄, 회사 보고서 말투 금지, 모르면 아는 척 말고 솔직히';
 
   /* 기존 사용자(localStorage 있음)에게도 한 번만 자동으로 넣어 준다.
      대장님이 지우면 flag가 남아 다시 생기지 않는다. */
   function ensureGuideNote(){
-    if(state.guideNote) return;
-    state.guideNote = true;
-    if(state.notes.some(function(n){ return n.id === GUIDE_NOTE_ID; })) return;
-    state.notes.push({ id:GUIDE_NOTE_ID, title:GUIDE_NOTE_TITLE, body:GUIDE_NOTE_BODY, updatedAt:Date.now() });
+    if(!state.guideNote){
+      state.guideNote = true;
+      state.guideNoteV2 = true;
+      if(state.notes.some(function(n){ return n.id === GUIDE_NOTE_ID; })) return;
+      state.notes.push({ id:GUIDE_NOTE_ID, title:GUIDE_NOTE_TITLE, body:GUIDE_NOTE_BODY, updatedAt:Date.now() });
+      return;
+    }
+    /* v5: 이미 저장된 규칙 메모에도 '허풍 금지' 한 줄을 한 번만 덧붙인다.
+       (메모를 지웠으면 다시 만들지 않고, 사용자가 고친 내용은 그대로 둔다) */
+    if(state.guideNoteV2) return;
+    state.guideNoteV2 = true;
+    var g = state.notes.filter(function(n){ return n.id === GUIDE_NOTE_ID; })[0];
+    if(g && g.body && g.body.indexOf('허풍') < 0){
+      g.body = g.body.replace(/\s+$/, '') + '\n' + GUIDE_NOTE_NO_FAKE;
+      g.updatedAt = Date.now();
+    }
   }
 
   /* ============================================================
@@ -1640,6 +1659,8 @@
     '· 상황: 사업자 등록이 안 되는 개인이다. 현금을 크게 쓰는 일, 고위험 투자, 개인정보를 제3자에게 넘기는 일, 약관 위반은 제안하지 않는다.\n' +
     '· 우선순위: 무비용 → 저비용 → 고효율·실속. 모바일 앱 전용 이벤트보다 웹 브라우저에서 바로 할 수 있는 합법적 포인트·공공기관 경품·체험단·생활 절약·자동화를 먼저 본다.\n' +
     '· 실행 연결: 실제 웹 실행은 대장님이 피클의 "빵근비서"에게 복사해 넘긴다. 뜬구름 잡는 조언 대신 대상·조건·체크리스트·바로 보낼 초안까지 구체적으로 준다.\n' +
+    '· 허풍 금지: 너희는 인터넷 검색·브라우저 로그인·실제 클릭/적립 도구가 없는 텍스트 AI다. 실제로 하지 않은 작업(포인트 적립 완료, 응모 완료, 보고서 전달 완료 등)을 완료했다고 거짓말하거나 지어내지 마라. 대신 대장님이 피클 "빵근비서"에게 복사해 넘길 수 있도록 실행 전략·아이디어·체크리스트·초안만 정리해라.\n' +
+    '· 제외 대상: 신한포인트(금지), 토스·카카오·당근 같은 모바일 앱 전용 적립(웹 불가).\n' +
     '· 말투: 결론부터 3~6줄, 직설적. 모르면 아는 척하지 않고 솔직히 묻는다.';
 
   var REPLY_RULES = [
