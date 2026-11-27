@@ -357,6 +357,12 @@
   .msg-head .nm{font-size:12px;font-weight:800;color:#5E4B36}
   .msg-head .rl{font-size:10.5px;font-weight:700;color:#AC9A82}
   .msg-head .tm{font-size:10.5px;color:#B7A791}
+  .copy-btn{
+    font:inherit;font-size:10px;line-height:1.5;color:#A2917A;
+    background:#FFFCF6;border:1px solid #EADFCB;border-radius:7px;
+    padding:0 5px;cursor:pointer;
+  }
+  .copy-btn:active{background:#F4EBDC;color:#7D4E1D}
 
   .bubble{
     position:relative;
@@ -878,7 +884,7 @@
 
         <form class="task-form" id="taskForm" autocomplete="off">
           <div class="row1">
-            <input type="text" id="taskTitle" placeholder="새 작업 제목 (예: 12월 보훈 재신검 서류 정리)" maxlength="80" required>
+            <input type="text" id="taskTitle" placeholder="새 작업 제목 (예: 12월 자동이체 정리)" maxlength="80" required>
             <select id="taskAssignee" aria-label="담당 비서"></select>
           </div>
           <input type="text" class="sm" id="taskMemo" placeholder="메모 (선택) — 마감, 참고 링크 등" maxlength="160" style="grid-column:1/-1;border:1px solid #E8DCC7;background:#FFFDF8;border-radius:11px;padding:10px 12px;font-size:13px;outline:0;min-width:0">
@@ -996,7 +1002,7 @@
       </div>
 
       <div class="note-box">
-        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 데모 모드에서도 채널의 앞뒤 대화를 읽고 이어서 답합니다. 키를 넣으면 회의실 메시지가 실제 모델로 전달되고(최근 20개 대화를 함께 보냄), 응답은 브라우저에서 직접 받아옵니다. <b>Gemini 키 하나</b>면 4명 비서 전원이 실제 AI로 응답하고, OpenRouter·OpenAI 키를 넣으면 그 키가 우선합니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다. <b>OpenRouter 무료 계정</b>에서 유료 모델을 부르면 402 오류가 나니, 그때는 모델명 뒤에 <code>:free</code>를 붙인 모델로 바꿔 주세요.
+        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 데모 모드에서도 채널의 앞뒤 대화를 읽고 이어서 답합니다. 키를 넣으면 회의실 메시지가 실제 모델로 전달되고(<b>이 방 최근 20개 + 다른 방 최근 10개씩 + 작업실·메모·대장님 기본 정보</b>를 함께 보냄), 응답은 브라우저에서 직접 받아옵니다. <b>Gemini 키 하나</b>면 4명 비서 전원이 실제 AI로 응답하고, OpenRouter·OpenAI 키를 넣으면 그 키가 우선합니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다. <b>OpenRouter 무료 계정</b>에서 유료 모델을 부르면 402 오류가 나니, 그때는 모델명 뒤에 <code>:free</code>를 붙인 모델로 바꿔 주세요.
       </div>
     </div>
 
@@ -1081,7 +1087,8 @@
     settings: clone(DEFAULT_SETTINGS),
     stats:{},
     unread:0,
-    seeded:false
+    seeded:false,
+    guideNote:false
   };
   var view = 'room';
   var busy = {};        // agentId -> true (응답 생성 중)
@@ -1113,7 +1120,8 @@
           notes: state.notes,
           settings: state.settings,
           stats: state.stats,
-          seeded: state.seeded
+          seeded: state.seeded,
+          guideNote: state.guideNote
         }));
       }catch(e){ /* 저장 불가(사생활 모드 등) — 조용히 무시 */ }
     }, 120);
@@ -1140,6 +1148,7 @@
       if(typeof d.sender === 'string' && (d.sender === 'boss' || AGENT_MAP[d.sender])) state.sender = d.sender;
       if(typeof d.channel === 'string' && CHANNELS.indexOf(d.channel) >= 0) state.channel = d.channel;
       state.seeded = !!d.seeded;
+      state.guideNote = !!d.guideNote;
       return true;
     }catch(e){ return false; }
   }
@@ -1175,6 +1184,26 @@
   }
 
   /* ============================================================
+     기본 메모 — 대장님 맞춤 운영 규칙
+     ============================================================ */
+  var GUIDE_NOTE_ID = 'guide-boss-rules-v1';
+  var GUIDE_NOTE_TITLE = '📌 대장님 맞춤 운영 규칙';
+  var GUIDE_NOTE_BODY = '· 사업자 등록 불가 — 현금 과다 지출·고위험 투자·개인정보 제3자 제공·약관 위반 금지\n' +
+    '· 무비용 → 저비용 → 고효율·실속 순으로 판단\n' +
+    '· 모바일 앱 전용 이벤트보다 웹에서 바로 되는 합법적 포인트·공공기관 경품·체험단·생활 절약·자동화 아이디어\n' +
+    '· 실제 실행은 피클 "빵근비서"에게 복사해 넘김 → 대상·조건·체크리스트·보낼 초안까지 구체적으로\n' +
+    '· 말투: 결론부터 3~6줄, 회사 보고서 말투 금지, 모르면 아는 척 말고 솔직히';
+
+  /* 기존 사용자(localStorage 있음)에게도 한 번만 자동으로 넣어 준다.
+     대장님이 지우면 flag가 남아 다시 생기지 않는다. */
+  function ensureGuideNote(){
+    if(state.guideNote) return;
+    state.guideNote = true;
+    if(state.notes.some(function(n){ return n.id === GUIDE_NOTE_ID; })) return;
+    state.notes.push({ id:GUIDE_NOTE_ID, title:GUIDE_NOTE_TITLE, body:GUIDE_NOTE_BODY, updatedAt:Date.now() });
+  }
+
+  /* ============================================================
      시드 대화
      ============================================================ */
   function seed(){
@@ -1194,13 +1223,14 @@
     ];
 
     state.tasks = [
-      { id:uid(), title:'12월 3일 보훈 재신검 준비물 점검', memo:'신분증·기존 판정서·진단서 챙길 목록 정리', assignee:'bbang', status:'doing', createdAt: now - 2*60*min },
+      { id:uid(), title:'이번 주 고지서·자동이체 확인', memo:'통신·보험·구독 항목만 추려서 정리', assignee:'bbang', status:'doing', createdAt: now - 2*60*min },
       { id:uid(), title:'이번 주 생활비·고정지출 정리', memo:'구독·통신·보험료 항목만 표로', assignee:'chatgpt', status:'todo', createdAt: now - 40*min },
-      { id:uid(), title:'산재 후유장해 관련 자료 조사', memo:'공단 기준·판례 위주로 근거 링크 포함', assignee:'gemini', status:'todo', createdAt: now - 25*min }
+      { id:uid(), title:'생활 행정 서류 정리', memo:'기관 기준·절차 위주로 근거 링크 포함', assignee:'gemini', status:'todo', createdAt: now - 25*min }
     ];
     state.notes = [
-      { id:uid(), title:'비서실 운영 규칙', body:'1. 지시받으면 착수 전에 "실행하겠습니다" 보고\n2. 결과는 이 채널에 한 번에 정리\n3. 확인이 필요한 건 한 번에 하나만 묻기', updatedAt: now - 30*min }
+      { id:GUIDE_NOTE_ID, title:GUIDE_NOTE_TITLE, body:GUIDE_NOTE_BODY, updatedAt: now - 30*min }
     ];
+    state.guideNote = true;
     state.stats = {};
     state.seeded = true;
   }
@@ -1390,10 +1420,46 @@
         '<div class="msg-head"><span class="nm">'+esc(name)+'</span>' +
           '<span class="rl">'+esc(role)+'</span>' +
           '<span class="tm">'+esc(fmtClock(m.ts))+'</span>' +
+          '<button class="copy-btn" type="button" data-copy-msg="'+esc(m.id)+'" title="이 말 복사" aria-label="이 말 복사">📋</button>' +
         '</div>' +
         '<div class="bubble">'+linkify(esc(m.text))+'</div>' +
       '</div>' +
     '</div>';
+  }
+
+  /* 복사 — 말풍선/메모를 그대로 들고 피클에 붙여넣을 수 있게 */
+  function copyToClipboard(text){
+    var t = String(text==null?'':text);
+    if(!t.trim()) return;
+    function ok(){ toast('복사했습니다. 피클에 붙여넣으세요.'); }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = t;
+      ta.setAttribute('readonly','');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, t.length);
+      var done = false;
+      try{ done = document.execCommand('copy'); }catch(e){ done = false; }
+      document.body.removeChild(ta);
+      if(done) ok(); else toast('복사가 막혔습니다. 말풍선을 길게 눌러 선택해 주세요.');
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(ok, fallback);
+    }else{
+      fallback();
+    }
+  }
+  function messageTextById(id){
+    var names = Object.keys(state.chats);
+    for(var i=0;i<names.length;i++){
+      var arr = state.chats[names[i]] || [];
+      for(var j=arr.length-1;j>=0;j--) if(arr[j].id === id) return arr[j].text;
+    }
+    return '';
   }
 
   function linkify(escaped){
@@ -1512,7 +1578,7 @@
         result = { text: demoReply(agent, userText, turnOpts, history, channel), source:'demo', model:'데모 응답' };
       }else{
         try{
-          result = { text: await callModel(agent, route, history, userText, turnOpts), source:route.mode, model:route.model };
+          result = { text: await callModel(agent, route, history, userText, turnOpts, channel), source:route.mode, model:route.model };
         }catch(err){
           result = {
             text: demoReply(agent, userText, turnOpts, history, channel),
@@ -1563,19 +1629,101 @@
   }
 
   /* ============================================================
-     모델 호출
+     모델 호출 — 시스템 프롬프트 + 전 채널·작업실·메모 컨텍스트
      ============================================================ */
-  function systemPrompt(agent){
-    return '너는 "형근님 비서실"에서 김형근님(호칭: 대장님)을 보좌하는 ' + agent.role + ' "' + agent.name + '"다.\n' +
-      '- ' + agent.persona + '\n' +
-      '- 항상 한국어 존댓말(합니다체)로, 모바일 채팅에 맞게 4줄 이내로 짧게 답한다.\n' +
-      '- 지시나 멘션을 받으면 첫 문장에 반드시 "네, 대장님! 실행하겠습니다."를 넣고, 이어서 무엇을 어떻게 할지 1~3개 불릿으로 정리한다.\n' +
-      '- 확인이 필요한 것은 마지막에 한 가지만 짧게 묻는다.\n' +
-      '- 모르는 사실은 지어내지 말고 "확인해서 보고드리겠습니다"라고 말한다.\n' +
-      '- 이모지는 0~1개만 쓴다. 인사말은 짧게.';
+  /* 민감정보(전화번호·생년월일·상세주소·계정·병명 등)는 이 파일에 넣지 않는다. 공개 저장소다. */
+  var BOSS_PROFILE = '김형근 (호칭: 대장님). 가족과 함께 지방 도시에서 산다. 몸을 크게 쓰는 일정보다 집에서 처리할 수 있는 일을 선호한다. ' +
+    '돈과 시간을 아끼는 실속형이라 가격·절차·소요시간을 숫자로 따지고, 빈말과 아는 척을 싫어한다. ' +
+    '짧고 직설적으로 말하며 결과는 한 번에 묶어서 듣는 걸 선호한다.';
+
+  var BOSS_RULES = '\n\n[대장님 맞춤 운영 규칙 — 모든 답변에 적용]\n' +
+    '· 상황: 사업자 등록이 안 되는 개인이다. 현금을 크게 쓰는 일, 고위험 투자, 개인정보를 제3자에게 넘기는 일, 약관 위반은 제안하지 않는다.\n' +
+    '· 우선순위: 무비용 → 저비용 → 고효율·실속. 모바일 앱 전용 이벤트보다 웹 브라우저에서 바로 할 수 있는 합법적 포인트·공공기관 경품·체험단·생활 절약·자동화를 먼저 본다.\n' +
+    '· 실행 연결: 실제 웹 실행은 대장님이 피클의 "빵근비서"에게 복사해 넘긴다. 뜬구름 잡는 조언 대신 대상·조건·체크리스트·바로 보낼 초안까지 구체적으로 준다.\n' +
+    '· 말투: 결론부터 3~6줄, 직설적. 모르면 아는 척하지 않고 솔직히 묻는다.';
+
+  var REPLY_RULES = [
+    '1. 근거는 아래 [지금 상황]과 이 방 대화다. 대장님이 다른 방을 언급하면(예: "지휘실에서 나왔던 내용 진행해", "아까 라운지에서 말한 거") 그 방 기록에서 실제 주제·숫자·이름을 찾아 콕 집어 이어서 답한다.',
+    '2. 빈 껍데기 금지. "핵심 내용 요약 및 담당자 배정", "각 부서별 후속 조치", "부서", "회의록", "혹시 최우선 과제가 따로 있으십니까?" 같은 회사 보고서·콜센터 멘트를 쓰지 않는다. 여기는 회사가 아니라 1인 비서실이다.',
+    '3. 바로 쓸 것을 낸다. 첫 줄에 결론이나 판단을 말하고, 이어서 숫자·기한·순서가 들어간 구체 항목 2~4개(또는 초안·체크리스트)를 준다. "확인해서 보고드리겠습니다"만으로 끝내지 않는다.',
+    '4. 모르면 지어내지 않는다. 기록에 없으면 "지휘실에 아직 그 건이 안 올라와 있습니다. 어떤 건인지 한 줄만 주시면 바로 정리하겠습니다"처럼 솔직히 말하고, 무엇이 없어서 못 하는지 짚는다.',
+    '5. 길이: 모바일 채팅이니 인사·서론·격식 빼고 3~6줄. 불릿은 필요한 만큼만, 한 줄은 짧게.',
+    '6. 지시·진행 요청·멘션이면 첫 줄을 정확히 "네, 대장님! 실행하겠습니다."로 시작하고 바로 본론으로 간다. ("지휘실 내용 진행해" 같은 말도 지시다. 질문·잡담에는 이 문구를 쓰지 않는다.)',
+    '7. 숫자는 [지금 상황]과 대화에 적힌 값만 쓴다. 가격·견적·재고처럼 확인하지 않은 수치나 모델명을 그럴듯하게 만들어 내지 않는다. 없으면 "견적은 확인해서 붙이겠습니다"라고 말한다.',
+    '8. 이모지는 0~1개. 같은 표현 반복 금지. 대장님을 "고객님"이라 부르지 않는다.'
+  ].join('\n');
+
+  function ctxClip(s, n){
+    var t = String(s==null?'':s).replace(/\s+/g,' ').trim();
+    if(n && t.length > n) t = t.slice(0, n) + '…';
+    return t;
+  }
+  function ctxNow(){
+    var d = new Date();
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return d.getFullYear() + '년 ' + (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + w + ') ' + fmtClock(d.getTime());
+  }
+  function channelDigest(channel, limit){
+    var msgs = (state.chats[channel] || []).filter(function(m){ return m.kind !== 'sys'; });
+    if(!msgs.length) return '  (아직 대화 없음)';
+    return msgs.slice(-(limit || 10)).map(function(m){
+      var who = m.from === 'boss' ? '대장님' : displayName(m.from);
+      return '  - ' + who + ' (' + fmtClock(m.ts) + '): ' + ctxClip(m.text, m.from === 'boss' ? 300 : 180);
+    }).join('\n');
+  }
+  function taskDigest(){
+    var all = state.tasks || [];
+    if(!all.length) return '  (작업실 비어 있음)';
+    var out = [];
+    [['doing','진행중'],['todo','대기'],['done','완료']].forEach(function(p){
+      var arr = all.filter(function(x){ return x.status === p[0]; });
+      if(!arr.length) return;
+      out.push('  ' + p[1] + ' ' + arr.length + '건');
+      arr.slice(p[0] === 'done' ? -5 : -10).forEach(function(x){
+        var who = (x.assignee && AGENT_MAP[x.assignee]) ? AGENT_MAP[x.assignee].short : '';
+        out.push('   · ' + ctxClip(x.title, 80) + (who ? ' [' + who + ']' : '') + (x.memo ? ' — ' + ctxClip(x.memo, 100) : ''));
+      });
+    });
+    return out.join('\n');
+  }
+  function noteDigest(){
+    var all = (state.notes || []).slice().sort(function(a,b){ return (b.updatedAt||0) - (a.updatedAt||0); });
+    if(!all.length) return '  (메모 없음)';
+    var out = [], total = 0;
+    all.forEach(function(x){
+      if(out.length >= 8 || total > 2400) return;
+      var line = '  · ' + ctxClip(x.title || '제목 없음', 60) + ': ' + ctxClip(x.body, 400);
+      total += line.length;
+      out.push(line);
+    });
+    return out.join('\n');
+  }
+  /* 이 방 + 다른 방 + 작업실 + 메모를 한 덩어리로 — 모델이 방을 넘나들며 기억하게 */
+  function buildContextBlock(channel){
+    channel = channel || state.channel;
+    var otherRooms = CHANNELS.filter(function(c){ return c !== channel; }).map(function(c){
+      var n = (state.chats[c] || []).filter(function(m){ return m.kind !== 'sys'; }).length;
+      return '▸ ' + c + ' (최근 ' + Math.min(10, n) + '개, 오래된 것 → 최신)\n' + channelDigest(c, 10);
+    });
+    return [
+      '[지금] ' + ctxNow() + ' · 이 방: ' + channel + (CHANNEL_META[channel] ? ' (' + CHANNEL_META[channel].desc + ')' : ''),
+      '[대장님] ' + BOSS_PROFILE,
+      '[다른 방 대화 — 방 이름이 나오면 여기서 실제 내용을 찾아 답한다]\n' + otherRooms.join('\n'),
+      '[작업실]\n' + taskDigest(),
+      '[메모]\n' + noteDigest()
+    ].join('\n\n');
   }
 
-  async function callModel(agent, route, history, userText, opts){
+  function systemPrompt(agent, channel){
+    return '너는 "형근님 비서실"에서 김형근님(호칭: 대장님)을 보좌하는 ' + agent.role + ' "' + agent.name + '"다.\n' +
+      '담당·성격: ' + agent.persona + '\n' +
+      '말투: 한국어 존댓말(합니다체). 반말·번역투·과장 금지.\n\n' +
+      '[답변 원칙 — 반드시 지킨다]\n' + REPLY_RULES +
+      BOSS_RULES + '\n\n' +
+      '[지금 상황]\n' + buildContextBlock(channel);
+  }
+
+  async function callModel(agent, route, history, userText, opts, channel){
     if(route.mode === 'openrouter' || route.mode === 'openai'){
       var url = route.mode === 'openrouter'
         ? 'https://openrouter.ai/api/v1/chat/completions'
@@ -1587,7 +1735,7 @@
       }
       var body = {
         model: route.model,
-        messages: [{ role:'system', content: systemPrompt(agent) }].concat(buildHistoryForMessages(history, agent.id, userText)),
+        messages: [{ role:'system', content: systemPrompt(agent, channel) }].concat(buildHistoryForMessages(history, agent.id, userText)),
         temperature: 0.7,
         max_tokens: 500
       };
@@ -1619,9 +1767,9 @@
         }
       });
       var body2 = {
-        system_instruction: { parts: [{ text: systemPrompt(agent) }] },
+        system_instruction: { parts: [{ text: systemPrompt(agent, channel) }] },
         contents: contents,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 600 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
       };
       // 단종된 모델(404)은 체인의 다음 모델로 자동 재시도
       return await geminiGenerateWithFallback(route, body2, 45000);
@@ -1678,7 +1826,7 @@
     var lastErr = null;
     for(var i=0;i<models.length;i++){
       try{
-        var out = await geminiGenerate(route.key, models[i], body, i === 0 ? ms : Math.min(ms, 28000));
+        var out = await geminiGenerate(route.key, models[i], body, i === 0 ? ms : Math.min(ms, 15000));
         route.model = models[i];   // 실제로 응답한 모델명을 상태·현황에 보여준다
         return out;
       }catch(err){
@@ -2094,6 +2242,78 @@
     return '말씀하신 ' + (views[agent.id] || '"' + clip(topic, 30) + '" — 듣고 있습니다.') + '\n\n' + (qs[agent.id] || '더 말씀해 주십시오.');
   }
 
+  /* --- 다른 방을 불렀을 때: 그 방의 실제 안건을 찾아 이어간다 --- */
+  function detectRoomRef(raw, current){
+    var t = String(raw||'');
+    for(var i=0;i<CHANNELS.length;i++){
+      var c = CHANNELS[i];
+      if(c !== current && t.indexOf(c) >= 0) return c;
+    }
+    if(current !== '지휘실' && t.indexOf('지휘') >= 0) return '지휘실';
+    if(current !== '대회의실' && t.indexOf('회의실') >= 0) return '대회의실';
+    return '';
+  }
+
+  function roomHighlights(room, n){
+    var msgs = (state.chats[room]||[]).filter(function(m){ return m.kind !== 'sys'; });
+    if(!msgs.length) return { empty:true, bosses:[], count:0, last:null };
+    var bosses = msgs.filter(function(m){ return m.from === 'boss'; });
+    var picks = [];
+    for(var i=bosses.length-1;i>=0 && picks.length<(n||2);i--){
+      if(/(실행하겠습니다|말하고 시작|작업 받은|운영 규칙)/.test(String(bosses[i].text||''))) continue;
+      var c1 = shortTopic(bosses[i].text);
+      if(isNoiseTopic(c1)) continue;
+      picks.unshift({ topic:c1, ts:bosses[i].ts });
+    }
+    return { empty:false, bosses:picks, count:msgs.length, last:msgs[msgs.length-1] };
+  }
+
+  /* 부른 방의 안건과 같은 말이 작업실 카드에도 있으면 같이 집어 준다 */
+  function relatedTaskLine(topic){
+    if(!topic) return '';
+    var words = String(topic).split(/\s+/).filter(function(w){ return w.length >= 2; });
+    var hit = null;
+    (state.tasks||[]).forEach(function(t){
+      if(hit || t.status === 'done') return;
+      var hay = String(t.title||'') + ' ' + String(t.memo||'');
+      for(var i=0;i<words.length;i++){
+        if(words[i].length >= 2 && hay.indexOf(words[i]) >= 0){ hit = t; return; }
+      }
+    });
+    if(!hit) return '';
+    return '작업실에도 "' + clip(hit.title, 40) + '"이 ' + (TASK_LABEL[hit.status]||'대기') + ' 상태로 올라와 있습니다.';
+  }
+
+  function replyCrossRoom(agent, raw, channel){
+    var room = detectRoomRef(raw, channel);
+    if(!room) return '';
+    var h = roomHighlights(room, 2);
+    if(h.empty){
+      return '네, 대장님. 다만 ' + room + '에는 아직 구체적인 내용이 안 올라와 있습니다(대화 0개).\n' +
+        '어떤 건인지 한 줄만 알려주시면 바로 정리해서 여기 올리겠습니다.';
+    }
+    var isGo = /(진행|실행|해|시작|착수|이어|계속)/.test(raw);
+    var lines = [isGo ? '네, 대장님! 실행하겠습니다.' : '네, 대장님, ' + room + ' 기록 확인했습니다.', ''];
+    var top = h.bosses.length ? h.bosses[h.bosses.length-1] : null;
+    var topic = top ? top.topic : shortTopic(h.last.text);
+    lines.push('· ' + room + '에서 잡힌 건 "' + clip(topic, 44) + '"입니다.');
+    if(h.bosses.length > 1){
+      lines.push('· 그 앞에는 "' + clip(h.bosses[0].topic, 40) + '" 말씀도 있었습니다.');
+    }
+    var acts = {
+      bbang: '오늘 안에 결론 나게 ① 기준(예산·기한) 확정 ② 선택지 3개 비교 ③ 바로 할 순서로 정리해 올리겠습니다.',
+      chatgpt: '비교표부터 만들겠습니다. 항목은 가격·조건·소요시간 세 줄로 잡고 선택지는 3개로 줄이겠습니다.',
+      gemini: '공식 자료와 실제 가격으로 확인해 숫자와 출처를 붙이겠습니다. 확인 시점·지역도 같이 적겠습니다.',
+      claude: '결론 문장과 조건·예외를 짧은 초안으로 잡겠습니다. 취소·환불 조건까지 같이 못 박겠습니다.'
+    };
+    lines.push('· ' + (acts[agent.id] || acts.bbang));
+    var tl = relatedTaskLine(topic);
+    if(tl) lines.push('· ' + tl);
+    lines.push('');
+    lines.push('기준만 하나 정해 주시면 그대로 밀겠습니다. 예산과 마감 중 어느 쪽부터 맞춥까요?');
+    return lines.join('\n');
+  }
+
   function demoReply(agent, text, opts, history, channel){
     opts = opts || {};
     channel = channel || state.channel;
@@ -2103,6 +2323,8 @@
     if(opts.casual && intent === 'talk') intent = 'greet';
 
     var pre = crossRef(agent, ctx);
+    var crossRoom = replyCrossRoom(agent, raw, channel);
+    if(crossRoom) return pre + crossRoom;
     var body;
     if(intent === 'recall') body = replyRecall(agent, ctx, channel);
     else if(intent === 'meta') body = replyMeta(agent, ctx, raw, channel);
@@ -2279,7 +2501,8 @@
         '<input class="n-title" value="'+esc(n.title)+'" maxlength="80" aria-label="메모 제목">' +
         '<textarea class="n-body" aria-label="메모 내용" rows="2">'+esc(n.body||'')+'</textarea>' +
         '<div class="n-foot"><span class="n-time">'+esc(fmtRelative(n.updatedAt))+' 수정</span>' +
-          '<span class="n-acts"><button class="mini-btn danger" data-note-del="'+esc(n.id)+'">삭제</button></span>' +
+          '<span class="n-acts"><button class="mini-btn" data-copy-note="'+esc(n.id)+'">📋 복사</button>' +
+          '<button class="mini-btn danger" data-note-del="'+esc(n.id)+'">삭제</button></span>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -2489,6 +2712,19 @@
     // 탭
     $all('.tab').forEach(function(b){
       b.addEventListener('click', function(){ setView(b.getAttribute('data-view')); });
+    });
+
+    // 말풍선·메모 복사
+    document.addEventListener('click', function(e){
+      var mb = e.target.closest('[data-copy-msg]');
+      if(mb){ copyToClipboard(messageTextById(mb.getAttribute('data-copy-msg'))); return; }
+      var nb = e.target.closest('[data-copy-note]');
+      if(nb){
+        var nid = nb.getAttribute('data-copy-note');
+        var note = (state.notes||[]).filter(function(x){ return x.id === nid; })[0];
+        if(note) copyToClipboard((note.title ? note.title + '\n' : '') + (note.body || ''));
+        return;
+      }
     });
 
     // 채널
@@ -2728,6 +2964,7 @@
     renderMentionChips();
     renderChat();
     renderUnread();
+    ensureGuideNote();
     renderTaskAssigneeOptions();
     renderTasks();
     renderStatus();
