@@ -383,6 +383,19 @@
   }
   .bubble .mention{color:#8A5722;font-weight:800;background:#F6E8D3;border-radius:5px;padding:0 3px}
   .bubble a{color:#8A5722}
+  .bubble .src-list{
+    display:flex;flex-direction:column;gap:2px;
+    margin-top:8px;padding-top:7px;
+    border-top:1px dashed #E2D3BA;
+    font-size:11px;line-height:1.45;
+    white-space:normal;
+  }
+  .bubble .src-list .src-h{font-size:9.5px;font-weight:800;color:#A2917A;letter-spacing:.2px}
+  .bubble .src-list a{
+    color:#1C6B8A;font-weight:600;text-decoration:none;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .bubble .src-list a:hover{text-decoration:underline}
 
   .msg.boss{flex-direction:row-reverse}
   .msg.boss .msg-body{align-items:flex-end}
@@ -455,6 +468,24 @@
   }
   .chip.mention:hover{background:#F7EFE0;border-style:solid}
   .chip .c-ico{font-size:12px}
+
+  /* ---------- 실시간 웹검색 토글 ---------- */
+  .web-row{gap:6px}
+  .web-toggle{
+    background:#F1F5F1;border-color:#D8E2D8;color:#5F7A64;
+    padding:5px 10px;font-size:11px;
+  }
+  .web-toggle:hover{background:#E9F0E9}
+  .web-toggle.is-on{
+    background:linear-gradient(180deg,#1E9E6A,#178055);
+    border-color:#14724B;color:#fff;
+    box-shadow:0 3px 9px rgba(23,128,85,.25);
+  }
+  .web-cost{
+    font-size:9.5px;font-weight:700;color:#AD9C86;
+    letter-spacing:-.1px;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0;
+  }
 
   .input-row{display:flex;align-items:flex-end;gap:8px;margin-top:2px}
   .input-shell{
@@ -857,6 +888,11 @@
               <span class="row-label">멘션</span>
               <div class="chips" id="mentionChips"></div>
             </div>
+            <div class="chip-row web-row">
+              <span class="row-label">검색</span>
+              <button type="button" class="chip web-toggle" id="webSearchChip" aria-pressed="false" title="OpenRouter 실시간 웹 검색 플러그인. 켜면 답변에 최신 검색 결과·출처가 붙습니다(회당 약 $0.02).">🌐 웹검색 OFF</button>
+              <span class="web-cost" id="webCostHint">ON 시 회당 ≈$0.02</span>
+            </div>
             <div class="input-row">
               <div class="input-shell">
                 <label class="sr-only" for="msgInput">메시지</label>
@@ -968,7 +1004,7 @@
             <input type="password" id="keyOpenrouter" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
             <button class="pw-toggle" type="button" data-target="keyOpenrouter">보기</button>
           </div>
-          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.<br><b>5달러 충전 크레딧</b> 기준으로 4명 모두 최신 가성비 모델이 기본값입니다(빵근·챗GPT <code>gpt-6-luna</code> · 제미나이 <code>gemini-3.5-flash-lite</code> · 클로드 <code>claude-haiku-5.5</code>). 크레딧이 떨어지면 402 오류가 나고 채팅에 충전 안내가 남습니다.</div>
+          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.<br><b>5달러 충전 크레딧</b> 기준으로 4명 모두 최신 가성비 모델이 기본값입니다(빵근·챗GPT <code>gpt-6-luna</code> · 제미나이 <code>gemini-3.5-flash-lite</code> · 클로드 <code>claude-haiku-5.5</code>). 크레딧이 떨어지면 402 오류가 나고 채팅에 충전 안내가 남습니다.<br><b>🌐 웹검색은 OpenRouter 키가 있을 때만</b> 켜집니다. 회의실 입력창 위 <code>🌐 웹검색</code> 칩으로 ON/OFF하며, 켜면 답변에 최신 검색 결과와 출처가 붙습니다(회당 약 $0.02, <code>@all</code> 4명이면 4배).</div>
         </div>
       </div>
 
@@ -1089,7 +1125,8 @@
   var DEFAULT_SETTINGS = {
     mode:'auto',
     keys:{ openrouter:'', openai:'', gemini:'' },
-    models:{ bbang:'', chatgpt:'', gemini:'', claude:'' }
+    models:{ bbang:'', chatgpt:'', gemini:'', claude:'' },
+    webSearch:false   // OpenRouter 실시간 웹 검색 플러그인 (plugins:[{id:'web'}]) 사용 여부
   };
 
   /* ============================================================
@@ -1162,6 +1199,7 @@
         state.settings.mode = d.settings.mode || 'auto';
         state.settings.keys = Object.assign({ openrouter:'', openai:'', gemini:'' }, d.settings.keys||{});
         state.settings.models = Object.assign({ bbang:'', chatgpt:'', gemini:'', claude:'' }, d.settings.models||{});
+        state.settings.webSearch = !!d.settings.webSearch;
       }
       if(d.stats && typeof d.stats === 'object') state.stats = d.stats;
       if(typeof d.sender === 'string' && (d.sender === 'boss' || AGENT_MAP[d.sender])) state.sender = d.sender;
@@ -1419,6 +1457,37 @@
     }).join('');
   }
 
+  /* ---------- 실시간 웹검색 토글 ----------
+     OpenRouter 공식 웹 플러그인(plugins:[{id:'web', max_results:3}])을 쓸지 정한다.
+     OpenRouter 키가 없는 모드(데모·Gemini/OpenAI 전용)에서는 켜지지 않고 안내만 한다. */
+  function webSearchAvailable(){
+    return state.settings.mode !== 'demo' && hasKey('openrouter');
+  }
+  function renderWebSearchChip(){
+    var b = $('#webSearchChip');
+    if(!b) return;
+    var on = !!state.settings.webSearch;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.innerHTML = '🌐 웹검색 ' + (on ? 'ON' : 'OFF');
+    var hint = $('#webCostHint');
+    if(hint) hint.textContent = on ? '회당 ≈$0.02 · @all 4명이면 4배' : 'ON 시 회당 ≈$0.02';
+  }
+  function toggleWebSearch(){
+    if(!state.settings.webSearch && !webSearchAvailable()){
+      toast('OpenRouter 모드에서 지원됩니다 — ⚙️ API 설정에서 OpenRouter 키를 넣어 주세요.');
+      return;
+    }
+    state.settings.webSearch = !state.settings.webSearch;
+    renderWebSearchChip();
+    save();
+    if(state.settings.webSearch){
+      toast('실시간 웹검색 ON — OpenRouter 답변에 최신 검색 결과·출처를 붙입니다. (회당 약 $0.02 · @all이면 4배)');
+    }else{
+      toast('웹검색 OFF — 검색 없이 저장된 대화·기억으로만 답합니다.');
+    }
+  }
+
   function renderChat(){
     var el = $('#chatScroll');
     var list = state.chats[state.channel] || [];
@@ -1467,7 +1536,7 @@
           '<span class="tm">'+esc(fmtClock(m.ts))+'</span>' +
           '<button class="copy-btn" type="button" data-copy-msg="'+esc(m.id)+'" title="이 말 복사" aria-label="이 말 복사">📋</button>' +
         '</div>' +
-        '<div class="bubble">'+linkify(esc(m.text))+'</div>' +
+        '<div class="bubble">'+linkify(esc(m.text))+sourceListHtml(m.annotations)+'</div>' +
       '</div>' +
     '</div>';
   }
@@ -1510,6 +1579,24 @@
   function linkify(escaped){
     // 멘션 강조 (@all, @빵근비서 ...)
     return escaped.replace(/(@(?:all|빵근비서|챗GPT|제미나이|클로드))/g, '<span class="mention">$1</span>');
+  }
+
+  /* 말풍선 하단 출처 — OpenRouter web 플러그인의 annotations(최대 3개) */
+  function sourceListHtml(annotations){
+    if(!Array.isArray(annotations) || !annotations.length) return '';
+    var rows = annotations.filter(function(a){
+      return a && /^https?:\/\//i.test(String(a.url || ''));
+    }).slice(0,3);
+    if(!rows.length) return '';
+    var items = rows.map(function(a){
+      var url = String(a.url);
+      var host = '';
+      try{ host = new URL(url).hostname.replace(/^www\./, ''); }catch(e){ host = ''; }
+      var label = ctxClip(a.title || '', 70) || host || url;
+      return '<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+
+        (host && a.title ? ' <span style="opacity:.55;font-weight:500">· '+esc(host)+'</span>' : '')+'</a>';
+    }).join('');
+    return '<div class="src-list"><span class="src-h">🌐 출처</span>'+items+'</div>';
   }
 
   function scrollChatToEnd(force){
@@ -1623,7 +1710,14 @@
         result = { text: demoReply(agent, userText, turnOpts, history, channel), source:'demo', model:'데모 응답' };
       }else{
         try{
-          result = { text: await callModel(agent, route, history, userText, turnOpts, channel), source:route.mode, model:route.model };
+          var out = await callModel(agent, route, history, userText, turnOpts, channel);
+          result = {
+            text: (out && typeof out === 'object') ? out.text : out,
+            annotations: (out && out.annotations) || [],
+            webUsed: !!(out && out.webUsed),
+            source: route.mode,
+            model: route.model
+          };
         }catch(err){
           result = {
             text: demoReply(agent, userText, turnOpts, history, channel),
@@ -1658,7 +1752,9 @@
         text: result.text,
         ts: Date.now(),
         source: result.source,
-        model: result.model
+        model: result.model,
+        annotations: result.annotations || [],
+        web: !!result.webUsed
       };
       pushMessage(channel, reply);
       state.stats[id] = { last: reply.ts, count: ((state.stats[id] && state.stats[id].count) || 0) + 1, source: result.source, model: result.model, error: result.error || '' };
@@ -1683,13 +1779,23 @@
     '돈과 시간을 아끼는 실속형이라 가격·절차·소요시간을 숫자로 따지고, 빈말과 아는 척을 싫어한다. ' +
     '짧고 직설적으로 말하며 결과는 한 번에 묶어서 듣는 걸 선호한다.';
 
-  var BOSS_RULES = '\n\n[대장님 맞춤 운영 규칙 — 모든 답변에 적용]\n' +
+  var BOSS_RULES_HEAD = '\n\n[대장님 맞춤 운영 규칙 — 모든 답변에 적용]\n' +
     '· 상황: 사업자 등록이 안 되는 개인이다. 현금을 크게 쓰는 일, 고위험 투자, 개인정보를 제3자에게 넘기는 일, 약관 위반은 제안하지 않는다.\n' +
     '· 우선순위: 무비용 → 저비용 → 고효율·실속. 모바일 앱 전용 이벤트보다 웹 브라우저에서 바로 할 수 있는 합법적 포인트·공공기관 경품·체험단·생활 절약·자동화를 먼저 본다.\n' +
-    '· 실행 연결: 실제 웹 실행은 대장님이 피클의 "빵근비서"에게 복사해 넘긴다. 뜬구름 잡는 조언 대신 대상·조건·체크리스트·바로 보낼 초안까지 구체적으로 준다.\n' +
-    '· 허풍 금지: 너희는 인터넷 검색·브라우저 로그인·실제 클릭/적립 도구가 없는 텍스트 AI다. 실제로 하지 않은 작업(포인트 적립 완료, 응모 완료, 보고서 전달 완료 등)을 완료했다고 거짓말하거나 지어내지 마라. 대신 대장님이 피클 "빵근비서"에게 복사해 넘길 수 있도록 실행 전략·아이디어·체크리스트·초안만 정리해라.\n' +
-    '· 제외 대상: 신한포인트(금지), 토스·카카오·당근 같은 모바일 앱 전용 적립(웹 불가).\n' +
+    '· 실행 연결: 실제 웹 실행은 대장님이 피클의 "빵근비서"에게 복사해 넘긴다. 뜬구름 잡는 조언 대신 대상·조건·체크리스트·바로 보낼 초안까지 구체적으로 준다.\n';
+  /* 웹검색 OFF일 때의 허풍 금지 / ON일 때는 검색 결과를 근거로 쓰도록 문구를 바꿔 넣는다 */
+  var BOSS_RULES_HONESTY = '· 허풍 금지: 너희는 인터넷 검색·브라우저 로그인·실제 클릭/적립 도구가 없는 텍스트 AI다. 실제로 하지 않은 작업(포인트 적립 완료, 응모 완료, 보고서 전달 완료 등)을 완료했다고 거짓말하거나 지어내지 마라. 대신 대장님이 피클 "빵근비서"에게 복사해 넘길 수 있도록 실행 전략·아이디어·체크리스트·초안만 정리해라.\n';
+  var BOSS_RULES_HONESTY_WEB = '· 허풍 금지: 브라우저 로그인·실제 클릭/적립 도구는 없지만, 이번 답변에는 OpenRouter 실시간 웹 검색 결과가 함께 제공된다. 검색된 최신 가격·날짜·사실과 출처를 근거로 답하고, 검색 결과에 없는 숫자·날짜·가격은 지어내지 마라. 실제로 하지 않은 작업(포인트 적립 완료, 응모 완료, 보고서 전달 완료 등)은 완료했다고 말하지 마라.\n';
+  var BOSS_RULES_TAIL = '· 제외 대상: 신한포인트(금지), 토스·카카오·당근 같은 모바일 앱 전용 적립(웹 불가).\n' +
     '· 말투: 결론부터 3~6줄, 직설적. 모르면 아는 척하지 않고 솔직히 묻는다.';
+  function bossRules(webOn){
+    return BOSS_RULES_HEAD + (webOn ? BOSS_RULES_HONESTY_WEB : BOSS_RULES_HONESTY) + BOSS_RULES_TAIL;
+  }
+  var WEB_SEARCH_RULES = '\n\n[실시간 웹 검색 — 이번 답변 ON]\n' +
+    '· 이번 요청에는 OpenRouter 웹 검색 결과(최신 웹 문서 발췌)와 URL 출처가 함께 제공된다.\n' +
+    '· 검색된 최신 가격·날짜·사실과 출처를 근거로 답하고, 검색 결과에 없는 숫자·날짜·가격은 지어내지 마라.\n' +
+    '· 오늘 날짜·시간은 [지금 상황]의 값을 기준으로 삼는다. 출처가 필요한 주장에는 기관명이나 사이트명을 한 번만 짧게 붙인다.\n' +
+    '· 검색 결과가 비어 있거나 질문과 무관하면 "검색으로는 확인되지 않았습니다"라고 솔직히 말한다.';
 
   var REPLY_RULES = [
     '1. 근거는 아래 [지금 상황]과 이 방 대화다. 대장님이 다른 방을 언급하면(예: "지휘실에서 나왔던 내용 진행해", "아까 라운지에서 말한 거") 그 방 기록에서 실제 주제·숫자·이름을 찾아 콕 집어 이어서 답한다.',
@@ -1764,12 +1870,12 @@
     ].join('\n\n');
   }
 
-  function systemPrompt(agent, channel){
+  function systemPrompt(agent, channel, webOn){
     return '너는 "형근님 비서실"에서 김형근님(호칭: 대장님)을 보좌하는 ' + agent.role + ' "' + agent.name + '"다.\n' +
       '담당·성격: ' + agent.persona + '\n' +
       '말투: 한국어 존댓말(합니다체). 반말·번역투·과장 금지.\n\n' +
       '[답변 원칙 — 반드시 지킨다]\n' + REPLY_RULES +
-      BOSS_RULES + '\n\n' +
+      bossRules(webOn) + (webOn ? WEB_SEARCH_RULES : '') + '\n\n' +
       '[지금 상황]\n' + buildContextBlock(channel);
   }
 
@@ -1797,6 +1903,21 @@
   function isParamReject(err){
     return !!err && err.status === 400 && /temperature|top_p|max_tokens|max_completion|reasoning|unsupported|not supported|unknown|invalid/i.test(err.detail || '');
   }
+  /* OpenRouter 응답의 annotations(URL citations) → 말풍선 하단 출처 목록(최대 3개) */
+  function pickAnnotations(message){
+    var arr = message && message.annotations;
+    if(!Array.isArray(arr)) return [];
+    var out = [], seen = {};
+    arr.forEach(function(a){
+      if(!a) return;
+      var c = a.url_citation || a.urlCitation || a;
+      var url = String((c && c.url) || a.url || '').trim();
+      if(!/^https?:\/\//i.test(url) || seen[url]) return;
+      seen[url] = true;
+      out.push({ url:url, title:String((c && c.title) || a.title || '').trim() });
+    });
+    return out.slice(0,3);
+  }
   async function chatCompletion(url, headers, body, ms){
     var res = await fetchWithTimeout(url, { method:'POST', headers:headers, body: JSON.stringify(body) }, ms);
     var data = null;
@@ -1810,36 +1931,55 @@
       if(res.status === 401) err.code = 'auth';      // 키 거부
       throw err;
     }
-    var content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    var message = data && data.choices && data.choices[0] && data.choices[0].message;
+    var content = message && message.content;
     if(!content) throw new Error('응답 본문이 비어 있습니다.');
-    return String(content).trim();
+    return { text: String(content).trim(), annotations: pickAnnotations(message) };
   }
-  async function callOpenaiCompatible(route, url, headers, messages, ms){
+  /* OpenRouter 호출 — webSearch(option)이 켜지면 공식 웹 플러그인을 붙인다.
+     ① plugins:[{id:'web',max_results:3}] → 400이면 ② 모델명 ':online' suffix → 400이면 ③ 플러그인 없는 일반 모델
+     ①·②에서 400이 아닌 오류(404·5xx 등)면 플러그인으로도 안 되므로 다음 예비 모델로 넘어간다. */
+  async function callOpenaiCompatible(route, url, headers, messages, ms, opts){
+    opts = opts || {};
+    var wantWeb = !!opts.webSearch && route.mode === 'openrouter';
     var models = modelCandidates(route);
     var lastErr = null;
     for(var i=0;i<models.length;i++){
-      var body = Object.assign({ model:models[i], messages:messages, max_tokens:600 }, modelParams(models[i]));
-      for(var pass=0; pass<2; pass++){
-        try{
-          var text = await chatCompletion(url, headers, body, i === 0 ? ms : Math.min(ms, 25000));
-          route.model = models[i];       // 실제로 답한 모델을 현황에 표시
-          return text;
-        }catch(err){
-          lastErr = err;
-          if(err.code === 'payment' || err.code === 'auth') throw err;
-          if(pass === 0 && isParamReject(err)){
-            var loose = Object.assign({}, body);
-            delete loose.temperature;
-            delete loose.top_p;
-            delete loose.reasoning;
-            if(/max_tokens/i.test(err.detail || '') && loose.max_tokens){
-              loose.max_completion_tokens = loose.max_tokens;
-              delete loose.max_tokens;
+      var baseModel = models[i];
+      var variants = wantWeb
+        ? [{ model:baseModel, plugins:true }, { model:baseModel + ':online', online:true }, { model:baseModel }]
+        : [{ model:baseModel }];
+      var nextModel = false;
+      for(var v=0; v<variants.length && !nextModel; v++){
+        var vv = variants[v];
+        var body = Object.assign({ model:vv.model, messages:messages, max_tokens:600 }, modelParams(vv.model));
+        if(vv.plugins) body.plugins = [{ id:'web', max_results:3 }];
+        for(var pass=0; pass<2; pass++){
+          try{
+            var out = await chatCompletion(url, headers, body, i === 0 ? ms : Math.min(ms, 25000));
+            route.model = vv.model;       // 실제로 답한 모델을 현황에 표시
+            return { text:out.text, annotations:out.annotations, webUsed:!!(vv.plugins || vv.online) };
+          }catch(err){
+            lastErr = err;
+            if(err.code === 'payment' || err.code === 'auth') throw err;
+            if(vv.plugins || vv.online){
+              if(err.status === 400) break;   // 파라미터 거부 → 다음 방식(:online 또는 일반 모델)
+              nextModel = true; break;        // 그 외 오류 → 이 모델은 포기
             }
-            body = loose;                // 같은 모델로 파라미터만 빼고 1회 더
-            continue;
+            if(pass === 0 && isParamReject(err)){
+              var loose = Object.assign({}, body);
+              delete loose.temperature;
+              delete loose.top_p;
+              delete loose.reasoning;
+              if(/max_tokens/i.test(err.detail || '') && loose.max_tokens){
+                loose.max_completion_tokens = loose.max_tokens;
+                delete loose.max_tokens;
+              }
+              body = loose;                // 같은 모델로 파라미터만 빼고 1회 더
+              continue;
+            }
+            break;                          // 다음 예비 모델로
           }
-          break;                          // 다음 예비 모델로
         }
       }
     }
@@ -1847,6 +1987,7 @@
   }
 
   async function callModel(agent, route, history, userText, opts, channel){
+    var webOn = !!state.settings.webSearch;
     if(route.mode === 'openrouter' || route.mode === 'openai'){
       var url = route.mode === 'openrouter'
         ? 'https://openrouter.ai/api/v1/chat/completions'
@@ -1856,8 +1997,9 @@
         headers['HTTP-Referer'] = location.origin || 'https://localhost';
         headers['X-Title'] = 'Hyeonggeun Secretary Office';
       }
-      var messages = [{ role:'system', content: systemPrompt(agent, channel) }].concat(buildHistoryForMessages(history, agent.id, userText));
-      return await callOpenaiCompatible(route, url, headers, messages, 45000);
+      var useWeb = webOn && route.mode === 'openrouter';   // 웹 플러그인은 OpenRouter 전용
+      var messages = [{ role:'system', content: systemPrompt(agent, channel, useWeb) }].concat(buildHistoryForMessages(history, agent.id, userText));
+      return await callOpenaiCompatible(route, url, headers, messages, 45000, { webSearch:useWeb });
     }
 
     if(route.mode === 'gemini'){
@@ -1871,12 +2013,13 @@
         }
       });
       var body2 = {
-        system_instruction: { parts: [{ text: systemPrompt(agent, channel) }] },
+        system_instruction: { parts: [{ text: systemPrompt(agent, channel, false) }] },
         contents: contents,
         generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
       };
       // 단종된 모델(404)은 체인의 다음 모델로 자동 재시도
-      return await geminiGenerateWithFallback(route, body2, 45000);
+      var gtext = await geminiGenerateWithFallback(route, body2, 45000);
+      return { text:gtext, annotations:[], webUsed:false };
     }
     throw new Error('지원하지 않는 연결 방식입니다.');
   }
@@ -2793,8 +2936,9 @@
         headers['HTTP-Referer'] = location.origin || 'https://localhost';
         headers['X-Title'] = 'Hyeonggeun Secretary Office';
       }
-      return await callOpenaiCompatible(route, url, headers,
-        [{ role:'user', content:'한국어로 "연결 확인"이라고만 답하세요.' }], 30000);
+      var r = await callOpenaiCompatible(route, url, headers,
+        [{ role:'user', content:'한국어로 "연결 확인"이라고만 답하세요.' }], 30000, {});
+      return (r && r.text) || '';
     }
     if(route.mode === 'gemini'){
       return await geminiGenerateWithFallback(route, {
@@ -2856,6 +3000,9 @@
       if(!b) return;
       insertAtCursor(b.getAttribute('data-mention'));
     });
+
+    // 실시간 웹검색 ON/OFF
+    $('#webSearchChip').addEventListener('click', toggleWebSearch);
 
     // 입력
     var input = $('#msgInput');
@@ -3023,6 +3170,7 @@
       save();
       renderChannelBar();
       renderStatusIfVisible();
+      renderWebSearchChip();
       toast(anyApi() ? ('4명 중 ' + apiCount() + '명 실제 AI 연결됨') : '데모 모드로 저장했습니다.');
       closeSettings();
     });
@@ -3062,6 +3210,7 @@
     renderChannelBar();
     renderSenderChips();
     renderMentionChips();
+    renderWebSearchChip();
     renderChat();
     renderUnread();
     ensureGuideNote();
