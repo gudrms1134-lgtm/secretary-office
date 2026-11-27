@@ -1,6 +1,6 @@
 /* 형근님 비서실 — Service Worker
    네트워크 우선 + 오프라인 캐시 폴백 (Android Chrome '앱 설치' 조건 충족용) */
-const CACHE = 'secretary-office-v2';
+const CACHE = 'secretary-office-v3';
 const ASSETS = [
   './',
   './index.html',
