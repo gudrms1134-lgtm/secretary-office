@@ -968,7 +968,7 @@
             <input type="password" id="keyOpenrouter" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
             <button class="pw-toggle" type="button" data-target="keyOpenrouter">보기</button>
           </div>
-          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.<br>무료 계정이면 <b>모델명 뒤에 <code>:free</code>가 붙은 모델</b>(openrouter.ai/models 에서 확인)을 지정하세요. 유료 모델을 그대로 두면 402(결제 필요) 오류가 납니다.</div>
+          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.<br><b>5달러 충전 크레딧</b> 기준으로 4명 모두 최신 가성비 모델이 기본값입니다(빵근·챗GPT <code>gpt-6-luna</code> · 제미나이 <code>gemini-3.5-flash-lite</code> · 클로드 <code>claude-haiku-5.5</code>). 크레딧이 떨어지면 402 오류가 나고 채팅에 충전 안내가 남습니다.</div>
         </div>
       </div>
 
@@ -993,6 +993,7 @@
 
       <details class="models">
         <summary>모델 지정 <span style="font-weight:700;font-size:10.5px;color:#A2917A">비워두면 기본값</span></summary>
+        <div class="desc" style="margin:0 0 8px">기본값(OpenRouter) — 빵근·챗GPT <code>openai/gpt-6-luna</code>(입력 $0.10 · 출력 $0.50 / 100만 토큰)<br>제미나이 <code>google/gemini-3.5-flash-lite</code>($0.30 · $2.50) · 클로드 <code>anthropic/claude-haiku-5.5</code>($0.10 · $0.50)<br>2026-11-27 openrouter.ai 실제 모델 목록에서 존재·단가를 확인한 값입니다.</div>
         <div class="m-body" id="modelRows"></div>
       </details>
 
@@ -1002,7 +1003,7 @@
       </div>
 
       <div class="note-box">
-        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 데모 모드에서도 채널의 앞뒤 대화를 읽고 이어서 답합니다. 키를 넣으면 회의실 메시지가 실제 모델로 전달되고(<b>이 방 최근 20개 + 다른 방 최근 10개씩 + 작업실·메모·대장님 기본 정보</b>를 함께 보냄), 응답은 브라우저에서 직접 받아옵니다. <b>Gemini 키 하나</b>면 4명 비서 전원이 실제 AI로 응답하고, OpenRouter·OpenAI 키를 넣으면 그 키가 우선합니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다. <b>OpenRouter 무료 계정</b>에서 유료 모델을 부르면 402 오류가 나니, 그때는 모델명 뒤에 <code>:free</code>를 붙인 모델로 바꿔 주세요.
+        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 데모 모드에서도 채널의 앞뒤 대화를 읽고 이어서 답합니다. 키를 넣으면 회의실 메시지가 실제 모델로 전달되고(<b>이 방 최근 20개 + 다른 방 최근 10개씩 + 작업실·메모·대장님 기본 정보</b>를 함께 보냄), 응답은 브라우저에서 직접 받아옵니다. <b>Gemini 키 하나</b>면 4명 비서 전원이 실제 AI로 응답하고, OpenRouter·OpenAI 키를 넣으면 그 키가 우선합니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다. <b>OpenRouter 크레딧이 0이 되면</b> 402 오류가 나고 채팅에 충전 안내가 남습니다. 그때는 충전하거나 모델명 뒤에 <code>:free</code>를 붙인 모델로 바꾸면 됩니다. 지정한 모델이 단종되면 <code>openai/gpt-4o-mini</code> → <code>google/gemini-2.5-flash-lite</code> 순으로 자동 재시도합니다.
       </div>
     </div>
 
@@ -1032,29 +1033,45 @@
   var GEMINI_MODEL_DEFAULT = 'gemini-flash-lite-latest';
   var GEMINI_MODEL_CHAIN = ['gemini-flash-lite-latest', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
 
+  /* OpenRouter 키 하나로 4명을 돌릴 때 쓰는 기본 모델.
+     2026-11-27 `https://openrouter.ai/api/v1/models` 실제 조회로 존재·단가를 확인한 모델만 넣었다.
+     모두 텍스트 출력·100만 토큰 안팎 컨텍스트이며, 100만 토큰당 입력 $0.10~0.30 / 출력 $0.50~2.50 대의 가성비 모델이다.
+       bbang·chatgpt : openai/gpt-6-luna              ($0.10 / $0.50, 1,050,000 ctx) — GPT-6 계열 경량·저지연
+       gemini        : google/gemini-3.5-flash-lite   ($0.30 / $2.50, 1,048,576 ctx) — 최신 Flash Lite, 100만 컨텍스트
+       claude        : anthropic/claude-haiku-5.5     ($0.10 / $0.50, 1,000,000 ctx) — 최신 Haiku(Opus 대비 1/50 가격) */
+  var OPENROUTER_MODEL = {
+    bbang:   'openai/gpt-6-luna',
+    chatgpt: 'openai/gpt-6-luna',
+    gemini:  'google/gemini-3.5-flash-lite',
+    claude:  'anthropic/claude-haiku-5.5'
+  };
+  /* 지정 모델이 단종·미지원(404)·빈 응답이면 이 순서로 예비 호출한다(둘 다 실제 목록에 있는 모델). */
+  var OPENROUTER_MODEL_FALLBACKS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash-lite'];
+  var OPENAI_MODEL_FALLBACKS = ['gpt-4o-mini'];
+
   var AGENTS = [
     {
       id:'bbang', name:'빵근비서', short:'빵근', icon:'ㅂ', avClass:'bbang',
       role:'총괄·생활행정 비서', mention:'@빵근비서', kind:'openai',
-      defaults:{ openrouter:'openai/gpt-4o-mini', openai:'gpt-4o-mini', gemini:GEMINI_MODEL_DEFAULT },
+      defaults:{ openrouter:OPENROUTER_MODEL.bbang, openai:'gpt-4o-mini', gemini:GEMINI_MODEL_DEFAULT },
       persona:'일정, 집안일, 행정 서류, 연락처 정리까지 전부 챙기는 총괄 비서. 보고는 짧고 정확하게, 할 일은 불릿으로 정리한다.'
     },
     {
       id:'chatgpt', name:'챗GPT 비서', short:'챗GPT', icon:'🤖', avClass:'chatgpt',
       role:'기획·자료정리 비서', mention:'@챗GPT', kind:'openai',
-      defaults:{ openrouter:'openai/gpt-4o-mini', openai:'gpt-4o-mini', gemini:GEMINI_MODEL_DEFAULT },
+      defaults:{ openrouter:OPENROUTER_MODEL.chatgpt, openai:'gpt-4o-mini', gemini:GEMINI_MODEL_DEFAULT },
       persona:'기획과 자료정리 담당. 흩어진 요청을 구조화하고 목차·단계·우선순위로 정리해 준다.'
     },
     {
       id:'gemini', name:'제미나이 비서', short:'제미나이', icon:'✨', avClass:'gemini',
       role:'리서치·분석 비서', mention:'@제미나이', kind:'gemini',
-      defaults:{ openrouter:'google/gemini-2.0-flash-001', gemini:GEMINI_MODEL_DEFAULT },
+      defaults:{ openrouter:OPENROUTER_MODEL.gemini, gemini:GEMINI_MODEL_DEFAULT },
       persona:'리서치와 분석 담당. 찾아본 근거와 숫자를 함께 제시하고, 모르는 것은 확인 후 보고한다.'
     },
     {
       id:'claude', name:'클로드 비서', short:'클로드', icon:'🧠', avClass:'claude',
       role:'코딩·문서작성 비서', mention:'@클로드', kind:'openrouter',
-      defaults:{ openrouter:'anthropic/claude-3.7-sonnet', gemini:GEMINI_MODEL_DEFAULT },
+      defaults:{ openrouter:OPENROUTER_MODEL.claude, gemini:GEMINI_MODEL_DEFAULT },
       persona:'코딩과 문서작성 담당. 문장을 정확하게 다듬고, 코드는 바로 실행 가능한 형태로 준다.'
     }
   ];
@@ -1310,6 +1327,15 @@
     if(has('openrouter')) return viaOpenrouter();
     if(has('gemini')) return viaGemini();     // 클로드도 Gemini 키로 (역할·말투는 systemPrompt로 유지)
     return demo();
+  }
+
+  /* 모델 ID → 제공자 이름(비서현황에 'OpenRouter · OpenAI · gpt-6-luna'처럼 보여 준다) */
+  function providerFamily(model){
+    var m = String(model || '');
+    if(m.indexOf('openai/') === 0) return 'OpenAI';
+    if(m.indexOf('google/') === 0) return 'Gemini';
+    if(m.indexOf('anthropic/') === 0) return 'Claude';
+    return '';
   }
 
   function anyApi(){
@@ -1614,7 +1640,9 @@
       if(result.error){
         var errNote = '⚠️ ' + agent.name + ' API 호출 실패(' + String(result.error).slice(0,120) + ') — 데모 응답으로 대체했습니다. ⚙️ API 설정을 확인해 주세요.';
         if(result.errorCode === 'payment'){
-          errNote = '💳 OpenRouter 충전이 필요하거나 무료 모델(:free)로 변경해야 합니다. ⚙️ API 설정 → 모델 지정에서 "...:free" 모델을 넣으시면 바로 쓸 수 있습니다. 지금은 데모 응답으로 대체했습니다.';
+          errNote = '💳 OpenRouter 크레딧이 부족합니다(402). openrouter.ai → Settings → Credits 에서 충전하거나, ⚙️ API 설정 → 모델 지정에서 "...:free" 모델을 넣으면 바로 쓸 수 있습니다. 지금은 데모 응답으로 대체했습니다.';
+        }else if(result.errorCode === 'auth'){
+          errNote = '🔑 API 키가 거부되었습니다(401). ⚙️ API 설정에서 OpenRouter 키를 다시 확인해 주세요. 지금은 데모 응답으로 대체했습니다.';
         }
         pushMessage(channel, {
           id: uid(),
@@ -1745,6 +1773,79 @@
       '[지금 상황]\n' + buildContextBlock(channel);
   }
 
+  /* ---------- OpenAI 호환(OpenRouter·OpenAI) 호출 ----------
+     · 모델 성격에 맞는 파라미터만 보낸다(추론형 모델에는 temperature 대신 reasoning.effort).
+     · 404(단종·미지원)/400(파라미터 미지원)/빈 응답이면 예비 모델로 넘어가고, 실제 응답 모델을 route.model에 남긴다.
+     · 402(크레딧 부족)·401(키 거부)은 모델을 바꿔도 결과가 같으므로 바로 알린다. */
+  function modelParams(model){
+    var id = String(model || '').toLowerCase().split('/').pop();
+    var reasoning = /^(gpt-5|gpt-6|o[0-9])/.test(id) || /^claude-(haiku|sonnet|opus)-(5|fable)/.test(id);
+    // 추론형 모델은 temperature를 받지 않고, 숨은 사고 토큰이 본문(max_tokens 600)을 잡아먹지 않도록 effort를 낮춘다
+    return reasoning ? { reasoning:{ effort:'low' } } : { temperature:0.7 };
+  }
+  function modelCandidates(route){
+    var fallbacks = route.mode === 'openai' ? OPENAI_MODEL_FALLBACKS : OPENROUTER_MODEL_FALLBACKS;
+    var seen = {}, list = [];
+    [route.model].concat(fallbacks).forEach(function(m){
+      m = String(m || '').trim();
+      if(!m || seen[m]) return;
+      seen[m] = true;
+      list.push(m);
+    });
+    return list;
+  }
+  function isParamReject(err){
+    return !!err && err.status === 400 && /temperature|top_p|max_tokens|max_completion|reasoning|unsupported|not supported|unknown|invalid/i.test(err.detail || '');
+  }
+  async function chatCompletion(url, headers, body, ms){
+    var res = await fetchWithTimeout(url, { method:'POST', headers:headers, body: JSON.stringify(body) }, ms);
+    var data = null;
+    try{ data = await res.json(); }catch(e){ data = null; }
+    if(!res.ok){
+      var msg = (data && data.error && (data.error.message || data.error.code)) || '';
+      var err = new Error('HTTP ' + res.status + (msg ? ' · ' + msg : ''));
+      err.status = res.status;
+      err.detail = String(msg);
+      if(res.status === 402) err.code = 'payment';   // 크레딧 부족
+      if(res.status === 401) err.code = 'auth';      // 키 거부
+      throw err;
+    }
+    var content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if(!content) throw new Error('응답 본문이 비어 있습니다.');
+    return String(content).trim();
+  }
+  async function callOpenaiCompatible(route, url, headers, messages, ms){
+    var models = modelCandidates(route);
+    var lastErr = null;
+    for(var i=0;i<models.length;i++){
+      var body = Object.assign({ model:models[i], messages:messages, max_tokens:600 }, modelParams(models[i]));
+      for(var pass=0; pass<2; pass++){
+        try{
+          var text = await chatCompletion(url, headers, body, i === 0 ? ms : Math.min(ms, 25000));
+          route.model = models[i];       // 실제로 답한 모델을 현황에 표시
+          return text;
+        }catch(err){
+          lastErr = err;
+          if(err.code === 'payment' || err.code === 'auth') throw err;
+          if(pass === 0 && isParamReject(err)){
+            var loose = Object.assign({}, body);
+            delete loose.temperature;
+            delete loose.top_p;
+            delete loose.reasoning;
+            if(/max_tokens/i.test(err.detail || '') && loose.max_tokens){
+              loose.max_completion_tokens = loose.max_tokens;
+              delete loose.max_tokens;
+            }
+            body = loose;                // 같은 모델로 파라미터만 빼고 1회 더
+            continue;
+          }
+          break;                          // 다음 예비 모델로
+        }
+      }
+    }
+    throw lastErr || new Error('OpenRouter 호출 실패');
+  }
+
   async function callModel(agent, route, history, userText, opts, channel){
     if(route.mode === 'openrouter' || route.mode === 'openai'){
       var url = route.mode === 'openrouter'
@@ -1755,27 +1856,8 @@
         headers['HTTP-Referer'] = location.origin || 'https://localhost';
         headers['X-Title'] = 'Hyeonggeun Secretary Office';
       }
-      var body = {
-        model: route.model,
-        messages: [{ role:'system', content: systemPrompt(agent, channel) }].concat(buildHistoryForMessages(history, agent.id, userText)),
-        temperature: 0.7,
-        max_tokens: 500
-      };
-      var res = await fetchWithTimeout(url, {
-        method:'POST', headers:headers, body: JSON.stringify(body)
-      }, 45000);
-      if(!res.ok){
-        var errText = '';
-        try{ var ej = await res.json(); errText = (ej.error && (ej.error.message || ej.error.code)) || ''; }catch(e){}
-        var errObj = new Error('HTTP ' + res.status + (errText ? ' · ' + errText : ''));
-        // 402 Payment Required — OpenRouter 무료 계정에서 유료 모델을 부를 때
-        if(res.status === 402) errObj.code = 'payment';
-        throw errObj;
-      }
-      var data = await res.json();
-      var content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if(!content) throw new Error('응답 본문이 비어 있습니다.');
-      return String(content).trim();
+      var messages = [{ role:'system', content: systemPrompt(agent, channel) }].concat(buildHistoryForMessages(history, agent.id, userText));
+      return await callOpenaiCompatible(route, url, headers, messages, 45000);
     }
 
     if(route.mode === 'gemini'){
@@ -2471,7 +2553,12 @@
       var route = resolveRoute(a);
       var st = statusOf(a.id);
       var stat = state.stats[a.id] || {};
-      var srcLabel = route.mode === 'demo' ? '데모 모드' : route.label + ' · ' + route.model;
+      var modelText = route.model;
+      var fam = providerFamily(route.model);
+      if(route.mode === 'openrouter' && fam){
+        modelText = fam + ' · ' + String(route.model).split('/').slice(1).join('/');   // openai/gpt-6-luna → OpenAI · gpt-6-luna
+      }
+      var srcLabel = route.mode === 'demo' ? '데모 모드' : route.label + ' · ' + modelText;
       // 지정 모델이 단종·혼잡으로 실패해 다른 모델이 답했다면 그 사실도 함께 보여준다
       if(route.mode !== 'demo' && stat.model && String(stat.source||'').indexOf('demo') !== 0 && stat.model !== route.model){
         srcLabel += ' → ' + stat.model;
@@ -2706,17 +2793,8 @@
         headers['HTTP-Referer'] = location.origin || 'https://localhost';
         headers['X-Title'] = 'Hyeonggeun Secretary Office';
       }
-      var r = await fetchWithTimeout(url, { method:'POST', headers:headers, body: JSON.stringify({
-        model: route.model, messages:[{ role:'user', content:'한국어로 "연결 확인"이라고만 답하세요.' }], max_tokens: 20, temperature: 0
-      })}, 30000);
-      if(!r.ok){
-        var m = ''; try{ var j = await r.json(); m = (j.error && (j.error.message||j.error.code)) || ''; }catch(e){}
-        throw new Error('HTTP '+r.status+(m?' · '+m:''));
-      }
-      var d = await r.json();
-      var c = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      if(!c) throw new Error('응답 없음');
-      return c;
+      return await callOpenaiCompatible(route, url, headers,
+        [{ role:'user', content:'한국어로 "연결 확인"이라고만 답하세요.' }], 30000);
     }
     if(route.mode === 'gemini'){
       return await geminiGenerateWithFallback(route, {
