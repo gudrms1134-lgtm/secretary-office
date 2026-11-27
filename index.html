@@ -1,0 +1,2352 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF6EE">
+<meta name="description" content="형근님 전용 멀티 비서실 — 회의실·작업실·비서현황·메모">
+<title>형근님 비서실</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="비서실">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --cream:#FAF6EE;
+    --cream-2:#F6EFE2;
+    --cream-3:#F1E7D6;
+    --card:#FFFCF6;
+    --brown:#7D4E1D;
+    --brown-2:#6B4118;
+    --brown-3:#8A5722;
+    --brown-soft:#F0E3CF;
+    --ink:#3B3027;
+    --ink-2:#5F5142;
+    --muted:#A2947F;
+    --peach:#FBE8DF;
+    --peach-2:#F8DED2;
+    --beige:#F2ECE1;
+    --line:#EADFCC;
+    --line-soft:#F0E7D8;
+    --green:#2E7D4F;
+    --green-soft:#E7F3EA;
+    --red:#B4362C;
+    --shadow-s:0 1px 2px rgba(94,66,34,.05);
+    --shadow-m:0 4px 16px rgba(94,66,34,.08);
+    --shadow-l:0 18px 44px rgba(94,66,34,.14);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Noto Sans CJK KR","Malgun Gothic",system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(900px 520px at 10% -10%, #FFF6E6 0%, rgba(255,246,230,0) 60%),
+      radial-gradient(800px 500px at 100% 0%, #F7EEDD 0%, rgba(247,238,221,0) 55%),
+      var(--cream);
+    min-height:100dvh;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  input,textarea,select{font:inherit;color:inherit}
+  ::selection{background:#F2D9BF}
+
+  /* ---------- app frame ---------- */
+  .app{
+    width:100%;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:linear-gradient(180deg,#FBF7EF 0%,#FAF6EE 34%,#FAF6EE 100%);
+    overflow:hidden;
+    position:relative;
+  }
+  @media (min-width:820px){
+    body{padding:22px}
+    .app{
+      max-width:1080px;
+      margin:0 auto;
+      height:calc(100dvh - 44px);
+      border-radius:28px;
+      border:1px solid #EFE4D2;
+      box-shadow:var(--shadow-l);
+    }
+  }
+
+  /* ---------- header ---------- */
+  .topbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px 12px;
+    padding-top:max(14px,env(safe-area-inset-top));
+    background:linear-gradient(180deg,#FFF9EE 0%,#FBF5E9 100%);
+    border-bottom:1px solid rgba(234,223,204,.7);
+  }
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .crown{
+    width:46px;height:46px;flex:0 0 46px;
+    display:grid;place-items:center;
+    font-size:22px;line-height:1;
+    border-radius:50%;
+    background:radial-gradient(circle at 32% 26%,#FFFDF7,#F6E7C8 72%);
+    border:1px solid #EDD9B4;
+    box-shadow:inset 0 1px 0 #fff, 0 2px 6px rgba(150,110,50,.12);
+  }
+  .brand h1{
+    margin:0;
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:-.4px;
+    color:#3A2E22;
+    white-space:nowrap;
+  }
+  .brand .sub{
+    margin:3px 0 0;
+    font-size:11.5px;
+    font-weight:600;
+    color:#7C6A54;
+    display:flex;align-items:center;gap:5px;
+    white-space:nowrap;
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;flex:0 0 6px}
+  .dot.green{box-shadow:0 0 0 3px rgba(46,125,79,.10)}
+  .dot.amber{background:#C98A2E}
+  .dot.gray{background:#B6AA97}
+
+  .top-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .live{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 11px;
+    font-size:11.5px;font-weight:700;
+    color:var(--green);
+    background:linear-gradient(180deg,#EFF8F1,#E4F1E8);
+    border:1px solid #CDE5D4;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .live.off{color:#8B7A63;background:#F2EDE3;border-color:#E3D8C4}
+  .live.off .dot{background:#B6AA97}
+  .icon-btn{
+    width:38px;height:38px;border-radius:50%;
+    display:grid;place-items:center;
+    font-size:17px;
+    background:#FFFDF8;
+    border:1px solid #EBDCC4;
+    box-shadow:var(--shadow-s);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .icon-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-m)}
+  .icon-btn:active{transform:translateY(0) scale(.97)}
+
+  /* ---------- tabs ---------- */
+  .tabs{
+    flex:0 0 auto;
+    display:flex;
+    gap:4px;
+    padding:10px 12px 11px;
+    background:#FBF7EF;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .tab{
+    flex:1 1 0;
+    min-width:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    padding:7px 2px 8px;
+    border-radius:16px;
+    color:#7C6A54;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:-.2px;
+    position:relative;
+    transition:background .18s ease,color .18s ease,transform .12s ease;
+  }
+  .tab .t-ico{font-size:17px;line-height:1.1;filter:saturate(.95)}
+  .tab:hover{background:#F6EFE2}
+  .tab.is-active{
+    color:#fff;
+    background:linear-gradient(180deg,var(--brown-3) 0%,#7A4A1A 55%,#6C3F16 100%);
+    box-shadow:0 6px 14px rgba(125,78,29,.24), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .tab.is-active .t-ico{filter:none}
+  .tab .badge{
+    position:absolute;top:4px;right:calc(50% - 26px);
+    min-width:16px;height:16px;padding:0 4px;
+    display:none;align-items:center;justify-content:center;
+    font-size:10px;font-weight:800;color:#fff;
+    background:#C4643B;border-radius:999px;
+    border:2px solid #FBF7EF;
+  }
+  .tab .badge.show{display:inline-flex}
+  @media (min-width:820px){
+    .tabs{justify-content:center}
+    .tab{flex:0 1 168px}
+    .brand h1{font-size:22px}
+  }
+
+  /* ---------- views ---------- */
+  .views{flex:1 1 auto;min-height:0;display:flex;position:relative}
+  .view{display:none;flex:1 1 auto;min-height:0;min-width:0}
+  .view.is-active{display:flex;flex-direction:column}
+
+  /* ---------- room ---------- */
+  .room-grid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:1fr}
+  @media (min-width:900px){
+    .room-grid{grid-template-columns:272px 1fr}
+  }
+  .members-panel{
+    display:none;
+    flex-direction:column;
+    gap:6px;
+    padding:16px 14px;
+    border-right:1px solid var(--line-soft);
+    background:linear-gradient(180deg,#FBF6EB,#F8F2E5);
+    min-height:0;
+    overflow:auto;
+  }
+  @media (min-width:900px){ .members-panel{display:flex} }
+  .panel-title{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:12px;font-weight:800;color:#8A7358;
+    letter-spacing:.2px;
+    padding:0 4px 8px;
+  }
+  .panel-title .count{
+    font-size:10.5px;font-weight:700;color:#8A7358;
+    background:#F1E6D2;border:1px solid #E7D8BE;border-radius:999px;padding:2px 7px;
+  }
+  .member{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 9px;
+    border-radius:14px;
+    transition:background .15s ease;
+  }
+  .member:hover{background:#FFFBF2}
+  .member .av{width:34px;height:34px;flex:0 0 34px;font-size:16px;border-radius:50%}
+  .member .m-txt{display:block;min-width:0;flex:1}
+  .member .m-name{display:block;font-size:13px;font-weight:800;color:#453626;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .member .m-role{display:block;font-size:10.5px;font-weight:600;color:#9A8870;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .member .m-st{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#8B7C68;white-space:nowrap}
+  .panel-foot{
+    margin-top:auto;padding:12px 10px 4px;
+    font-size:11px;line-height:1.6;color:#9A8974;
+    border-top:1px dashed #E5D7BF;
+  }
+  .panel-foot b{color:#7D5F3B}
+
+  .av{
+    display:grid;place-items:center;
+    border-radius:50%;
+    background:radial-gradient(circle at 32% 28%,#FFFDF8,#F3E6D0);
+    border:1px solid #EBDCC2;
+    font-size:17px;line-height:1;
+    box-shadow:inset 0 1px 0 #fff;
+    flex:0 0 auto;
+  }
+  .av.bbang{background:linear-gradient(180deg,#F6ECDC,#EADCC2);color:#7D4E1D;font-weight:900;font-size:15px;border-color:#E0CDAE}
+  .av.chatgpt{background:linear-gradient(180deg,#EFF4F1,#DCE9E2);border-color:#D2E3DA}
+  .av.gemini{background:linear-gradient(180deg,#FBF1DE,#F4E2C2);border-color:#EDD8B4}
+  .av.claude{background:linear-gradient(180deg,#F6ECE6,#EDDCCF);border-color:#E5D1C2}
+  .av.boss{background:linear-gradient(180deg,#FFF4DE,#F7E3BC);border-color:#EFD6A8}
+
+  .chat-col{display:flex;flex-direction:column;min-height:0;min-width:0;background:
+      radial-gradient(620px 260px at 88% 2%, rgba(250,232,220,.55), rgba(250,232,220,0) 62%),
+      linear-gradient(180deg,#FAF6EE,#FAF6EE);}
+
+  .channel-bar{
+    flex:0 0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:12px 14px 8px;
+  }
+  .pills{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none}
+  .pills::-webkit-scrollbar{display:none}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:8px 13px;
+    border-radius:999px;
+    background:#F6EFE1;
+    border:1px solid transparent;
+    color:#79654B;
+    font-size:12.5px;font-weight:700;
+    white-space:nowrap;
+    transition:all .16s ease;
+  }
+  .pill:hover{background:#F2E8D6}
+  .pill.is-active{
+    background:#FFFDF8;
+    border-color:#EBDFC9;
+    color:#5C3F22;
+    box-shadow:0 3px 10px rgba(125,78,29,.10), inset 0 1px 0 #fff;
+  }
+  .ghost-btn{
+    flex:0 0 auto;
+    font-size:11px;font-weight:700;color:#A7967E;
+    padding:6px 8px;border-radius:9px;
+  }
+  .ghost-btn:hover{background:#F3EADB;color:#83694A}
+
+  .channel-meta{
+    flex:0 0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:0 16px 8px;
+    font-size:11.5px;font-weight:700;color:#8E7B63;
+  }
+  .channel-meta .line-wrap{display:flex;align-items:center;gap:6px;min-width:0}
+  .channel-meta .sep{flex:1;border-bottom:1px dashed #E2D3BB;height:0;margin-left:4px}
+  .mode-chip{
+    font-size:10px;font-weight:800;letter-spacing:.2px;
+    padding:3px 8px;border-radius:999px;
+    color:#8A6A3E;background:#F5EAD7;border:1px solid #EADCC3;
+    white-space:nowrap;
+  }
+  .mode-chip.api{color:#2E7D4F;background:#EAF5EC;border-color:#CFE6D5}
+
+  /* ---------- chat ---------- */
+  .chat-scroll{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:4px 14px 10px;
+    scroll-behavior:smooth;
+    overscroll-behavior:contain;
+  }
+  .chat-scroll::-webkit-scrollbar{width:6px}
+  .chat-scroll::-webkit-scrollbar-thumb{background:#E6D9C3;border-radius:99px}
+  .chat-scroll::-webkit-scrollbar-track{background:transparent}
+
+  .day-sep{
+    display:flex;align-items:center;justify-content:center;
+    margin:6px 0 14px;
+  }
+  .day-sep span{
+    font-size:10.5px;font-weight:700;color:#A7967E;
+    background:rgba(255,252,246,.8);
+    border:1px solid #EEE2CD;
+    padding:4px 12px;border-radius:999px;
+  }
+  .sys-note{
+    display:flex;justify-content:center;
+    margin:2px 0 14px;
+  }
+  .sys-note span{
+    max-width:86%;
+    text-align:center;
+    font-size:11px;line-height:1.55;font-weight:600;
+    color:#9A8870;
+    background:#F7F0E2;
+    border:1px dashed #E7D9C0;
+    padding:6px 12px;border-radius:12px;
+  }
+
+  .msg{display:flex;align-items:flex-start;gap:9px;margin-bottom:13px}
+  .msg .av{width:38px;height:38px}
+  .msg-body{min-width:0;max-width:min(calc(100% - 60px), 560px);display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+  .msg-head{
+    display:flex;align-items:baseline;gap:6px;
+    padding:0 2px;
+    font-size:11px;color:#A7967E;font-weight:600;
+  }
+  .msg-head .nm{font-size:12px;font-weight:800;color:#5E4B36}
+  .msg-head .rl{font-size:10.5px;font-weight:700;color:#AC9A82}
+  .msg-head .tm{font-size:10.5px;color:#B7A791}
+
+  .bubble{
+    position:relative;
+    padding:11px 14px 12px;
+    border-radius:16px;
+    border-top-left-radius:6px;
+    background:var(--beige);
+    border:1px solid #E9DFCD;
+    font-size:13.6px;
+    line-height:1.66;
+    letter-spacing:-.15px;
+    color:#463A2D;
+    white-space:pre-wrap;
+    word-break:break-word;
+    overflow-wrap:anywhere;
+    box-shadow:0 1px 2px rgba(94,66,34,.04);
+    max-width:100%;
+  }
+  .bubble .mention{color:#8A5722;font-weight:800;background:#F6E8D3;border-radius:5px;padding:0 3px}
+  .bubble a{color:#8A5722}
+
+  .msg.boss{flex-direction:row-reverse}
+  .msg.boss .msg-body{align-items:flex-end}
+  .msg.boss .msg-head{flex-direction:row-reverse}
+  .msg.boss .bubble{
+    background:linear-gradient(180deg,#FCEADF,#FBE3D7);
+    border-color:#F2D6C6;
+    border-radius:16px;
+    border-top-right-radius:6px;
+    color:#4C3327;
+  }
+  .msg .stamp{
+    font-size:10px;color:#BDAE98;font-weight:600;
+    padding:0 4px;
+  }
+
+  .typing-bubble{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:13px 16px;
+  }
+  .typing-bubble i{
+    width:6px;height:6px;border-radius:50%;
+    background:#B9A78C;display:inline-block;
+    animation:blink 1.1s infinite ease-in-out;
+  }
+  .typing-bubble i:nth-child(2){animation-delay:.16s}
+  .typing-bubble i:nth-child(3){animation-delay:.32s}
+  @keyframes blink{0%,80%,100%{opacity:.28;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+
+  .msg.enter{animation:msgIn .28s ease both}
+  @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---------- composer ---------- */
+  .composer{
+    flex:0 0 auto;
+    padding:8px 12px 10px;
+    padding-bottom:max(10px,env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,rgba(250,246,238,.4),#FBF6EC 26%,#FBF6EC 100%);
+    border-top:1px solid rgba(234,223,204,.85);
+    box-shadow:0 -8px 22px rgba(120,88,48,.05);
+  }
+  .chip-row{display:flex;align-items:center;gap:7px;margin-bottom:6px;min-width:0}
+  .row-label{flex:0 0 auto;font-size:10.5px;font-weight:800;color:#A2917A;letter-spacing:.2px;padding-left:2px}
+  .chips{display:flex;gap:6px;min-width:0;flex-wrap:wrap;padding-bottom:1px}
+  .chips.wrap{flex-wrap:wrap;overflow:visible}
+
+  .chip{
+    flex:0 0 auto;
+    display:inline-flex;align-items:center;gap:5px;
+    padding:6px 11px;
+    border-radius:999px;
+    background:#F4EBDA;
+    border:1px solid #EADCC4;
+    font-size:11.5px;font-weight:700;color:#77624A;
+    white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .chip:hover{background:#F0E4CE}
+  .chip.is-active{
+    background:linear-gradient(180deg,#8A5722,#6E4318);
+    border-color:#6E4318;
+    color:#fff;
+    box-shadow:0 3px 9px rgba(125,78,29,.22);
+  }
+  .chip.mention{
+    background:transparent;
+    border:1px dashed #D9C7AB;
+    color:#93795A;
+    padding:5px 10px;
+  }
+  .chip.mention:hover{background:#F7EFE0;border-style:solid}
+  .chip .c-ico{font-size:12px}
+
+  .input-row{display:flex;align-items:flex-end;gap:8px;margin-top:2px}
+  .input-shell{
+    flex:1 1 auto;min-width:0;
+    display:flex;align-items:center;
+    background:#FFFDF8;
+    border:1px solid #E8DCC7;
+    border-radius:22px;
+    padding:5px 6px 5px 14px;
+    box-shadow:inset 0 1px 2px rgba(120,88,48,.04), 0 2px 6px rgba(120,88,48,.04);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .input-shell:focus-within{border-color:#D9BE96;box-shadow:0 0 0 3px rgba(199,160,110,.16)}
+  #msgInput{
+    flex:1 1 auto;min-width:0;
+    border:0;outline:0;resize:none;background:transparent;
+    font-size:13.5px;line-height:1.5;
+    padding:6px 2px;
+    max-height:104px;
+    color:#403326;
+  }
+  #msgInput::placeholder{color:#B7A68E;font-size:12.5px}
+  .send-btn{
+    width:42px;height:42px;flex:0 0 42px;
+    border-radius:50%;
+    display:grid;place-items:center;
+    background:linear-gradient(180deg,#8C5823,#6E4318);
+    color:#fff;
+    box-shadow:0 6px 14px rgba(125,78,29,.26), inset 0 1px 0 rgba(255,255,255,.18);
+    transition:transform .15s ease, box-shadow .15s ease, opacity .15s;
+  }
+  .send-btn:hover{transform:translateY(-1px)}
+  .send-btn:active{transform:scale(.96)}
+  .send-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .send-btn svg{width:18px;height:18px;transform:translateX(1px)}
+
+  /* ---------- generic view ---------- */
+  .view-scroll{
+    flex:1 1 auto;min-height:0;
+    overflow-y:auto;
+    padding:16px 14px 26px;
+    overscroll-behavior:contain;
+  }
+  .view-scroll::-webkit-scrollbar{width:6px}
+  .view-scroll::-webkit-scrollbar-thumb{background:#E6D9C3;border-radius:99px}
+  .section-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    margin:0 2px 12px;
+  }
+  .section-head h2{
+    margin:0;font-size:15px;font-weight:800;letter-spacing:-.3px;color:#3E3125;
+    display:flex;align-items:center;gap:7px;
+  }
+  .section-head h2 .ico{font-size:16px}
+  .section-head .sub{font-size:11px;font-weight:600;color:#A2917A;margin-top:3px;line-height:1.5}
+  .section-head .aside{font-size:11px;font-weight:700;color:#A2917A;white-space:nowrap}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow-s);
+  }
+
+  /* tasks */
+  .task-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:14px;padding:11px;border-radius:16px;background:#FFFCF6;border:1px solid var(--line);box-shadow:var(--shadow-s)}
+  .task-form .row1{grid-column:1/-1;display:flex;gap:8px}
+  .task-form input[type=text], .task-form select, .task-form input[type=text].sm{
+    border:1px solid #E8DCC7;background:#FFFDF8;border-radius:11px;
+    padding:10px 12px;font-size:13px;outline:0;min-width:0;
+    transition:border-color .15s ease,box-shadow .15s ease;
+  }
+  .task-form input:focus,.task-form select:focus{border-color:#D9BE96;box-shadow:0 0 0 3px rgba(199,160,110,.14)}
+  .task-form #taskTitle{flex:1 1 auto}
+  .task-form select{flex:0 0 auto;max-width:44%;color:#6B5946;font-weight:600;font-size:12px}
+  .task-form .add-btn{
+    grid-column:1/-1;
+    padding:10px 14px;border-radius:12px;
+    background:linear-gradient(180deg,#8C5823,#6E4318);color:#fff;
+    font-size:12.5px;font-weight:800;
+    box-shadow:0 4px 10px rgba(125,78,29,.2);
+  }
+  .task-form .add-btn:active{transform:scale(.99)}
+
+  .board{display:grid;grid-template-columns:1fr;gap:12px}
+  @media (min-width:700px){ .board{grid-template-columns:repeat(3,1fr);align-items:start} }
+  .col{background:#F8F1E4;border:1px solid #EFE4D0;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:9px;min-height:110px}
+  .col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 4px}
+  .col-head .t{font-size:12px;font-weight:800;color:#6B5540;display:flex;align-items:center;gap:6px}
+  .col-head .n{font-size:10.5px;font-weight:800;color:#8D7A63;background:#FFF9ED;border:1px solid #EBDCC4;border-radius:999px;padding:1px 7px}
+  .col[data-status=doing] .t::before{content:"";width:7px;height:7px;border-radius:50%;background:#C98A2E}
+  .col[data-status=todo] .t::before{content:"";width:7px;height:7px;border-radius:50%;background:#B6AA97}
+  .col[data-status=done] .t::before{content:"";width:7px;height:7px;border-radius:50%;background:#4B9464}
+  .col.is-drop{outline:2px dashed #D6BC94;outline-offset:2px}
+
+  .task{
+    background:#FFFDF8;
+    border:1px solid #EBDFCA;
+    border-radius:13px;
+    padding:11px 11px 9px;
+    box-shadow:0 1px 2px rgba(94,66,34,.05);
+    display:flex;flex-direction:column;gap:7px;
+    transition:transform .15s ease,box-shadow .15s ease,opacity .2s;
+    cursor:grab;
+  }
+  .task:hover{transform:translateY(-1px);box-shadow:var(--shadow-m)}
+  .task.dragging{opacity:.5}
+  .task .tt{font-size:13px;font-weight:800;line-height:1.45;color:#443728;letter-spacing:-.15px}
+  .task.done .tt{text-decoration:line-through;color:#A08E78;font-weight:700}
+  .task .tm{font-size:11.5px;line-height:1.55;color:#8A7A66;white-space:pre-wrap;word-break:break-word}
+  .task .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .task .who{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:#7B6446;background:#F6EEDF;border:1px solid #EEDFC6;border-radius:999px;padding:2px 8px}
+  .task .when{font-size:10px;color:#B3A38C;font-weight:600}
+  .task .acts{display:flex;gap:5px;margin-top:2px;flex-wrap:wrap}
+  .mini-btn{
+    font-size:10.5px;font-weight:800;
+    padding:5px 9px;border-radius:8px;
+    background:#F4EBDD;color:#7A6247;border:1px solid #E9DAC2;
+    transition:all .14s ease;
+  }
+  .mini-btn:hover{background:#EFE3D0}
+  .mini-btn.primary{background:linear-gradient(180deg,#8C5823,#754818);color:#fff;border-color:#754818}
+  .mini-btn.green{background:#EAF5EC;color:#2E7D4F;border-color:#CFE6D5}
+  .mini-btn.danger{background:#FBEDEA;color:#B4362C;border-color:#F2D6D0}
+  .empty{
+    font-size:11.5px;color:#AF9F88;font-weight:600;
+    text-align:center;padding:14px 8px;
+    border:1px dashed #E3D5BD;border-radius:12px;
+    background:rgba(255,253,248,.55);
+  }
+
+  /* status view */
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  @media (min-width:700px){ .stat-grid{grid-template-columns:repeat(4,1fr)} }
+  .kpi{background:#FFFCF6;border:1px solid var(--line);border-radius:15px;padding:12px 13px;box-shadow:var(--shadow-s)}
+  .kpi .k{font-size:10.5px;font-weight:800;color:#A2917A;letter-spacing:.2px}
+  .kpi .v{font-size:17px;font-weight:800;color:#453628;margin-top:5px;letter-spacing:-.4px}
+  .kpi .v small{font-size:11px;font-weight:700;color:#A2917A;margin-left:3px}
+
+  .agent-grid{display:grid;grid-template-columns:1fr;gap:11px}
+  @media (min-width:760px){ .agent-grid{grid-template-columns:repeat(2,1fr)} }
+  .agent-card{
+    background:linear-gradient(180deg,#FFFDF8,#FFFBF2);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:var(--shadow-s);
+    display:flex;flex-direction:column;gap:11px;
+  }
+  .agent-top{display:flex;align-items:center;gap:11px}
+  .agent-top .av{width:44px;height:44px;font-size:20px}
+  .agent-top .a-name{font-size:14px;font-weight:800;color:#3E3125;letter-spacing:-.2px}
+  .agent-top .a-role{font-size:11px;font-weight:600;color:#9A8870;margin-top:3px}
+  .agent-top .a-st{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+  .a-st.online{color:#2E7D4F;background:#EAF5EC;border:1px solid #CFE6D5}
+  .a-st.working{color:#9A6416;background:#FBF0DC;border:1px solid #F0DEBC}
+  .a-st.idle{color:#8B7A63;background:#F4EFE5;border:1px solid #E6DAC6}
+  .kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:11.5px;padding:5px 0;border-top:1px dashed #EFE3CE}
+  .kv .k{color:#A2917A;font-weight:700;flex:0 0 auto}
+  .kv .v{color:#5B4A37;font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kv .v.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:-.2px}
+  .agent-actions{display:flex;gap:6px;margin-top:1px}
+  .agent-actions .mini-btn{flex:1;text-align:center;padding:7px 6px}
+
+  /* notes */
+  .note-form{display:flex;flex-direction:column;gap:8px;padding:11px;border-radius:16px;background:#FFFCF6;border:1px solid var(--line);margin-bottom:14px;box-shadow:var(--shadow-s)}
+  .note-form input[type=text],.note-form textarea{
+    border:1px solid #E8DCC7;background:#FFFDF8;border-radius:11px;
+    padding:10px 12px;font-size:13px;outline:0;width:100%;
+    transition:border-color .15s ease,box-shadow .15s ease;
+  }
+  .note-form textarea{resize:vertical;min-height:64px;line-height:1.6}
+  .note-form input:focus,.note-form textarea:focus{border-color:#D9BE96;box-shadow:0 0 0 3px rgba(199,160,110,.14)}
+  .note-form .nf-foot{display:flex;justify-content:flex-end;gap:6px}
+  .notes{display:grid;grid-template-columns:1fr;gap:11px}
+  @media (min-width:760px){ .notes{grid-template-columns:repeat(2,1fr);align-items:start} }
+  .note{
+    background:linear-gradient(180deg,#FFFDF6,#FFFBF0);
+    border:1px solid #EBDFC8;
+    border-radius:16px;
+    padding:13px 13px 10px;
+    box-shadow:0 2px 6px rgba(94,66,34,.05);
+    display:flex;flex-direction:column;gap:7px;
+    position:relative;
+  }
+  .note::before{content:"";position:absolute;left:13px;right:13px;top:0;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,#E8C99B,#F3E1C4)}
+  .note .n-title{
+    font-size:13px;font-weight:800;color:#41331F;letter-spacing:-.2px;
+    border:0;background:transparent;outline:0;width:100%;padding:2px 0;
+  }
+  .note .n-body{
+    font-size:12.5px;line-height:1.65;color:#5D4C39;
+    border:0;background:transparent;outline:0;width:100%;resize:vertical;min-height:52px;
+    font-family:inherit;padding:2px 0;
+    white-space:pre-wrap;
+  }
+  .note .n-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px dashed #EFE3CE;padding-top:7px}
+  .note .n-time{font-size:10px;color:#B3A38C;font-weight:600}
+  .note .n-acts{display:flex;gap:4px}
+
+  /* modal */
+  .modal-backdrop[hidden]{display:none}
+  .modal-backdrop{
+    position:fixed;inset:0;z-index:60;
+    background:rgba(58,43,28,.34);
+    backdrop-filter:blur(3px);
+    display:flex;align-items:flex-end;justify-content:center;
+    padding:0;
+    animation:fadeIn .18s ease both;
+  }
+  @media (min-width:640px){ .modal-backdrop{align-items:center;padding:22px} }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{
+    width:100%;max-width:560px;
+    max-height:92dvh;
+    display:flex;flex-direction:column;
+    background:#FFFDF8;
+    border:1px solid #EBDCC4;
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -10px 40px rgba(60,42,24,.22);
+    animation:sheetUp .24s cubic-bezier(.2,.8,.3,1) both;
+    overflow:hidden;
+  }
+  @media (min-width:640px){ .modal{border-radius:22px;box-shadow:0 24px 60px rgba(60,42,24,.26);max-height:86dvh;} }
+  @keyframes sheetUp{from{transform:translateY(18px);opacity:.6}to{transform:none;opacity:1}}
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:15px 16px 12px;
+    border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(180deg,#FFF9EE,#FDF7EC);
+  }
+  .modal-head h3{margin:0;font-size:15px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:7px}
+  .modal-head p{margin:4px 0 0;font-size:11px;color:#A2917A;font-weight:600}
+  .modal-body{padding:14px 16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+  .modal-body::-webkit-scrollbar{width:6px}
+  .modal-body::-webkit-scrollbar-thumb{background:#E6D9C3;border-radius:99px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:11.5px;font-weight:800;color:#6D5941;display:flex;align-items:center;gap:6px}
+  .field .desc{font-size:10.5px;color:#A2917A;font-weight:600;line-height:1.5}
+  .field input[type=text],.field input[type=password],.field select{
+    border:1px solid #E8DCC7;background:#FFFCF6;border-radius:11px;
+    padding:10px 12px;font-size:13px;outline:0;width:100%;
+    transition:border-color .15s ease,box-shadow .15s ease;
+  }
+  .field input:focus,.field select:focus{border-color:#D9BE96;box-shadow:0 0 0 3px rgba(199,160,110,.14)}
+  .field .pw-wrap{position:relative;display:flex}
+  .field .pw-wrap input{padding-right:44px}
+  .pw-toggle{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    font-size:11px;font-weight:800;color:#9A8567;
+    padding:5px 7px;border-radius:8px;
+  }
+  .pw-toggle:hover{background:#F4EBDD}
+  .seg{display:flex;gap:5px;background:#F6EFE2;border:1px solid #EBDFC9;border-radius:12px;padding:4px;flex-wrap:wrap}
+  .seg button{
+    flex:1 1 0;min-width:64px;
+    padding:8px 6px;border-radius:9px;
+    font-size:11.5px;font-weight:800;color:#8A7358;
+    transition:all .15s ease;
+  }
+  .seg button.is-active{background:#FFFDF8;color:#5C3F22;box-shadow:0 2px 6px rgba(125,78,29,.12);border:1px solid #EADCC3}
+  .key-block{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:14px;background:#FBF5EA;border:1px solid #EFE3CE}
+  .key-block h4{margin:0;font-size:12px;font-weight:800;color:#6B5540;display:flex;align-items:center;gap:6px}
+  .key-block h4 span{font-size:10px;font-weight:700;color:#A2917A}
+  details.models{border:1px solid #EFE3CE;border-radius:14px;background:#FBF5EA;overflow:hidden}
+  details.models summary{
+    padding:12px;font-size:12px;font-weight:800;color:#6B5540;cursor:pointer;list-style:none;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  details.models summary::-webkit-details-marker{display:none}
+  details.models summary::after{content:"▾";color:#A2917A;font-size:11px}
+  details.models[open] summary::after{content:"▴"}
+  details.models .m-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:9px}
+  .m-row{display:grid;grid-template-columns:74px 1fr;gap:8px;align-items:center}
+  .m-row .mn{font-size:11px;font-weight:800;color:#7B6446;display:flex;align-items:center;gap:5px}
+  .m-row input{font-size:11.5px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .note-box{
+    font-size:11px;line-height:1.6;color:#8A7660;font-weight:600;
+    background:#F9F2E4;border:1px dashed #E5D6BD;border-radius:11px;padding:10px 11px;
+  }
+  .note-box b{color:#7A5B33}
+  .test-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .test-result{font-size:11px;font-weight:700;color:#8A7660;line-height:1.5;flex:1 1 auto;min-width:120px;word-break:break-word}
+  .test-result.ok{color:#2E7D4F}
+  .test-result.err{color:#B4362C}
+  .modal-foot{
+    display:flex;align-items:center;gap:8px;
+    padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));
+    border-top:1px solid var(--line-soft);
+    background:#FDF8EE;
+  }
+  .btn{
+    padding:11px 16px;border-radius:12px;
+    font-size:12.5px;font-weight:800;
+    background:#F2E8D7;color:#6B5540;border:1px solid #E7D8BE;
+    transition:all .15s ease;
+  }
+  .btn:hover{background:#EEE1CB}
+  .btn.primary{background:linear-gradient(180deg,#8C5823,#6E4318);color:#fff;border-color:#6E4318;box-shadow:0 5px 12px rgba(125,78,29,.22)}
+  .btn.primary:hover{filter:brightness(1.04)}
+  .btn.ghost{background:transparent;border-color:transparent;color:#A2917A}
+  .btn.ghost:hover{background:#F6EEDF}
+  .btn.grow{flex:1}
+
+  /* toast */
+  .toast-wrap{position:fixed;left:0;right:0;bottom:24px;z-index:80;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;padding:0 16px}
+  .toast{
+    max-width:440px;width:fit-content;
+    background:rgba(62,45,28,.94);
+    color:#FFF8EA;
+    font-size:12px;font-weight:700;line-height:1.5;
+    padding:9px 15px;border-radius:16px;
+    box-shadow:0 10px 24px rgba(50,34,18,.24);
+    animation:toastIn .22s ease both;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.out{opacity:0;transform:translateY(6px)}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+
+  @media (max-width:400px){
+    .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{padding:6px 9px;font-size:11px}
+    .chip.mention{padding:5px 8px}
+    .brand h1{font-size:18px}
+    .crown{width:42px;height:42px;flex-basis:42px;font-size:20px}
+  }
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="crown" aria-hidden="true">👑</div>
+      <div class="brand-text">
+        <h1>형근님 비서실</h1>
+        <p class="sub"><span class="dot green"></span>김형근님 전용</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="live" id="liveBadge" title="연결 상태"><span class="dot"></span>실시간 연결</span>
+      <button class="icon-btn" id="btnSettings" aria-label="API 설정" title="API 설정">⚙️</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="메뉴">
+    <button class="tab is-active" role="tab" aria-selected="true" data-view="room">
+      <span class="t-ico">💬</span><span>회의실</span><span class="badge" id="roomBadge">0</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" data-view="tasks">
+      <span class="t-ico">📋</span><span>작업실</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" data-view="status">
+      <span class="t-ico">📊</span><span>비서현황</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" data-view="notes">
+      <span class="t-ico">📝</span><span>메모</span>
+    </button>
+  </nav>
+
+  <main class="views">
+    <!-- ===== 회의실 ===== -->
+    <section class="view view-room is-active" data-view="room" aria-label="회의실">
+      <div class="room-grid">
+        <aside class="members-panel" aria-label="비서실 멤버">
+          <div class="panel-title"><span>비서실 멤버</span><span class="count">5명</span></div>
+          <div id="memberList"></div>
+          <div class="panel-foot">
+            <b>대장님 지시 →</b> 지목된 비서가 먼저 <b>“네, 대장님! 실행하겠습니다.”</b>로 응답합니다.<br>
+            멘션이 없으면 총괄 빵근비서가 1차로 받습니다.
+          </div>
+        </aside>
+
+        <div class="chat-col">
+          <div class="channel-bar">
+            <div class="pills" id="channelPills" role="tablist" aria-label="채널">
+              <button class="pill" data-channel="대회의실" role="tab">🏛️ 대회의실</button>
+              <button class="pill" data-channel="지휘실" role="tab">🎯 지휘실</button>
+              <button class="pill" data-channel="라운지" role="tab">☕ 라운지</button>
+            </div>
+            <button class="ghost-btn" id="btnClearChat" title="현재 채널 대화 비우기">비우기</button>
+          </div>
+          <div class="channel-meta">
+            <div class="line-wrap"><span id="channelMeta">🎯 지휘실 · ON 5명</span><span class="sep"></span></div>
+            <span class="mode-chip" id="modeChip">데모 모드</span>
+          </div>
+          <div class="chat-scroll" id="chatScroll" aria-live="polite"></div>
+
+          <div class="composer">
+            <div class="chip-row">
+              <span class="row-label">발신</span>
+              <div class="chips" id="senderChips"></div>
+            </div>
+            <div class="chip-row">
+              <span class="row-label">멘션</span>
+              <div class="chips" id="mentionChips"></div>
+            </div>
+            <div class="input-row">
+              <div class="input-shell">
+                <label class="sr-only" for="msgInput">메시지</label>
+                <textarea id="msgInput" rows="1" placeholder="지시를 입력하세요. @멘션하면 그 비서가 먼저 답합니다."></textarea>
+              </div>
+              <button class="send-btn" id="btnSend" aria-label="전송">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.6 20.4l17.2-7.6a.9.9 0 000-1.6L3.6 3.6a.9.9 0 00-1.3 1l1.2 6.2 9.3 1.2-9.3 1.2-1.2 6.2a.9.9 0 001.3 1z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 작업실 ===== -->
+    <section class="view" data-view="tasks" aria-label="작업실">
+      <div class="view-scroll">
+        <div class="section-head">
+          <div>
+            <h2><span class="ico">📋</span>작업실</h2>
+            <div class="sub">지시받은 일을 카드로 관리합니다. 끌어서 옮겨도 됩니다.</div>
+          </div>
+          <div class="aside" id="taskSummary">대기 0 · 진행 0 · 완료 0</div>
+        </div>
+
+        <form class="task-form" id="taskForm" autocomplete="off">
+          <div class="row1">
+            <input type="text" id="taskTitle" placeholder="새 작업 제목 (예: 12월 보훈 재신검 서류 정리)" maxlength="80" required>
+            <select id="taskAssignee" aria-label="담당 비서"></select>
+          </div>
+          <input type="text" class="sm" id="taskMemo" placeholder="메모 (선택) — 마감, 참고 링크 등" maxlength="160" style="grid-column:1/-1;border:1px solid #E8DCC7;background:#FFFDF8;border-radius:11px;padding:10px 12px;font-size:13px;outline:0;min-width:0">
+          <button class="add-btn" type="submit">＋ 작업 추가</button>
+        </form>
+
+        <div class="board" id="taskBoard"></div>
+      </div>
+    </section>
+
+    <!-- ===== 비서현황 ===== -->
+    <section class="view" data-view="status" aria-label="비서현황">
+      <div class="view-scroll">
+        <div class="section-head">
+          <div>
+            <h2><span class="ico">📊</span>비서현황</h2>
+            <div class="sub">비서 4명의 상태·모델·최근 응답입니다.</div>
+          </div>
+          <button class="mini-btn primary" id="btnGoSettings">⚙️ API 설정</button>
+        </div>
+
+        <div class="stat-grid" id="statusKpi"></div>
+        <div class="agent-grid" id="agentGrid"></div>
+
+        <div class="note-box" style="margin-top:14px">
+          <b>연결 방식</b> — 자동 모드에서는 입력된 키를 우선 사용합니다. OpenRouter 키 하나면 세 모델을 모두 호출할 수 있고, 개별 OpenAI·Gemini 키가 있으면 해당 비서는 그 키로 직접 호출합니다. 키가 없는 비서는 데모 모드로 성격에 맞게 응답합니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 메모 ===== -->
+    <section class="view" data-view="notes" aria-label="메모">
+      <div class="view-scroll">
+        <div class="section-head">
+          <div>
+            <h2><span class="ico">📝</span>메모</h2>
+            <div class="sub">이 브라우저에 저장됩니다. 바로 고칠 수 있습니다.</div>
+          </div>
+          <div class="aside" id="noteCount">0개</div>
+        </div>
+
+        <form class="note-form" id="noteForm" autocomplete="off">
+          <input type="text" id="noteTitle" placeholder="메모 제목" maxlength="80" required>
+          <textarea id="noteBody" placeholder="내용을 적으세요. (선택)" rows="2"></textarea>
+          <div class="nf-foot"><button class="mini-btn primary" type="submit" style="padding:8px 14px">＋ 메모 추가</button></div>
+        </form>
+
+        <div class="notes" id="notesList"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== 설정 모달 ===== -->
+<div class="modal-backdrop" id="settingsModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="settingsTitle"><span>⚙️</span> API 설정</h3>
+        <p>키는 이 브라우저(localStorage)에만 저장되고 서버로 보내지 않습니다.</p>
+      </div>
+      <button class="icon-btn" id="btnCloseSettings" aria-label="닫기" style="width:32px;height:32px;font-size:14px">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field">
+        <label>연결 모드</label>
+        <div class="seg" id="modeSeg">
+          <button type="button" data-mode="auto">자동</button>
+          <button type="button" data-mode="openrouter">OpenRouter</button>
+          <button type="button" data-mode="direct">개별 키</button>
+          <button type="button" data-mode="demo">데모</button>
+        </div>
+        <div class="desc" id="modeDesc">자동: 입력된 키를 우선 사용하고, 없으면 데모로 응답합니다.</div>
+      </div>
+
+      <div class="key-block">
+        <h4>OpenRouter <span>한 키로 GPT·Gemini·Claude 전부</span></h4>
+        <div class="field">
+          <div class="pw-wrap">
+            <input type="password" id="keyOpenrouter" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
+            <button class="pw-toggle" type="button" data-target="keyOpenrouter">보기</button>
+          </div>
+          <div class="desc">openrouter.ai → Keys 에서 발급. 모델은 아래에서 바꿀 수 있습니다.</div>
+        </div>
+      </div>
+
+      <div class="key-block">
+        <h4>개별 키 <span>OpenAI · Google Gemini</span></h4>
+        <div class="field">
+          <label for="keyOpenai">OpenAI API 키</label>
+          <div class="pw-wrap">
+            <input type="password" id="keyOpenai" placeholder="sk-..." autocomplete="off" spellcheck="false">
+            <button class="pw-toggle" type="button" data-target="keyOpenai">보기</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="keyGemini">Gemini API 키</label>
+          <div class="pw-wrap">
+            <input type="password" id="keyGemini" placeholder="AIza..." autocomplete="off" spellcheck="false">
+            <button class="pw-toggle" type="button" data-target="keyGemini">보기</button>
+          </div>
+          <div class="desc">aistudio.google.com → Get API key</div>
+        </div>
+      </div>
+
+      <details class="models">
+        <summary>모델 지정 <span style="font-weight:700;font-size:10.5px;color:#A2917A">비워두면 기본값</span></summary>
+        <div class="m-body" id="modelRows"></div>
+      </details>
+
+      <div class="test-row">
+        <button class="btn" id="btnTest" type="button">🔌 연결 테스트</button>
+        <div class="test-result" id="testResult">아직 테스트하지 않았습니다.</div>
+      </div>
+
+      <div class="note-box">
+        <b>안내</b> — API 키가 없어도 앱은 100% 동작합니다(데모 모드). 키를 넣으면 회의실 메시지가 실제 모델로 전달되고, 응답은 브라우저에서 직접 받아옵니다. 키를 지우면 즉시 데모로 돌아갑니다. 브라우저가 직접 호출을 막거나 키가 틀리면 응답을 데모로 대체하고 채팅에 안내를 남깁니다.
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn ghost" id="btnReset" type="button" title="대화·작업·메모·키 모두 삭제">초기화</button>
+      <button class="btn primary grow" id="btnSaveSettings" type="button">저장</button>
+      <button class="btn" id="btnCloseSettings2" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============================================================
+     기본 데이터
+     ============================================================ */
+  var STORE_KEY = 'secretaryOffice.v1';
+
+  var BOSS = { id:'boss', name:'형근', label:'형근 (대장님)', icon:'👑', role:'대장님', avClass:'boss' };
+
+  var AGENTS = [
+    {
+      id:'bbang', name:'빵근비서', short:'빵근', icon:'ㅂ', avClass:'bbang',
+      role:'총괄·생활행정 비서', mention:'@빵근비서', kind:'openai',
+      defaults:{ openrouter:'openai/gpt-4o-mini', openai:'gpt-4o-mini' },
+      persona:'일정, 집안일, 행정 서류, 연락처 정리까지 전부 챙기는 총괄 비서. 보고는 짧고 정확하게, 할 일은 불릿으로 정리한다.'
+    },
+    {
+      id:'chatgpt', name:'챗GPT 비서', short:'챗GPT', icon:'🤖', avClass:'chatgpt',
+      role:'기획·자료정리 비서', mention:'@챗GPT', kind:'openai',
+      defaults:{ openrouter:'openai/gpt-4o-mini', openai:'gpt-4o-mini' },
+      persona:'기획과 자료정리 담당. 흩어진 요청을 구조화하고 목차·단계·우선순위로 정리해 준다.'
+    },
+    {
+      id:'gemini', name:'제미나이 비서', short:'제미나이', icon:'✨', avClass:'gemini',
+      role:'리서치·분석 비서', mention:'@제미나이', kind:'gemini',
+      defaults:{ openrouter:'google/gemini-2.0-flash-001', gemini:'gemini-2.0-flash' },
+      persona:'리서치와 분석 담당. 찾아본 근거와 숫자를 함께 제시하고, 모르는 것은 확인 후 보고한다.'
+    },
+    {
+      id:'claude', name:'클로드 비서', short:'클로드', icon:'🧠', avClass:'claude',
+      role:'코딩·문서작성 비서', mention:'@클로드', kind:'openrouter',
+      defaults:{ openrouter:'anthropic/claude-3.7-sonnet' },
+      persona:'코딩과 문서작성 담당. 문장을 정확하게 다듬고, 코드는 바로 실행 가능한 형태로 준다.'
+    }
+  ];
+
+  var AGENT_MAP = {};
+  AGENTS.forEach(function(a){ AGENT_MAP[a.id] = a; });
+
+  var CHANNELS = ['대회의실','지휘실','라운지'];
+  var CHANNEL_META = {
+    '대회의실': { icon:'🏛️', desc:'전체 안건·정기 보고' },
+    '지휘실':   { icon:'🎯', desc:'핵심 지시·실행' },
+    '라운지':   { icon:'☕', desc:'가벼운 잡담·아이디어' }
+  };
+
+  var DEFAULT_SETTINGS = {
+    mode:'auto',
+    keys:{ openrouter:'', openai:'', gemini:'' },
+    models:{ bbang:'', chatgpt:'', gemini:'', claude:'' }
+  };
+
+  /* ============================================================
+     상태
+     ============================================================ */
+  var state = {
+    channel:'지휘실',
+    sender:'boss',
+    chats:{ '대회의실':[], '지휘실':[], '라운지':[] },
+    tasks:[],
+    notes:[],
+    settings: clone(DEFAULT_SETTINGS),
+    stats:{},
+    unread:0,
+    seeded:false
+  };
+  var view = 'room';
+  var busy = {};        // agentId -> true (응답 생성 중)
+  var saveTimer = null;
+
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+  function $(sel, root){ return (root||document).querySelector(sel); }
+  function $all(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  function esc(s){
+    return String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  /* ============================================================
+     저장 / 복원
+     ============================================================ */
+  function save(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      try{
+        localStorage.setItem(STORE_KEY, JSON.stringify({
+          channel: state.channel,
+          sender: state.sender,
+          chats: state.chats,
+          tasks: state.tasks,
+          notes: state.notes,
+          settings: state.settings,
+          stats: state.stats,
+          seeded: state.seeded
+        }));
+      }catch(e){ /* 저장 불가(사생활 모드 등) — 조용히 무시 */ }
+    }, 120);
+  }
+  function load(){
+    var raw = null;
+    try{ raw = localStorage.getItem(STORE_KEY); }catch(e){ raw = null; }
+    if(!raw) return false;
+    try{
+      var d = JSON.parse(raw);
+      if(d.chats){
+        CHANNELS.forEach(function(c){
+          if(Array.isArray(d.chats[c])) state.chats[c] = d.chats[c];
+        });
+      }
+      if(Array.isArray(d.tasks)) state.tasks = d.tasks;
+      if(Array.isArray(d.notes)) state.notes = d.notes;
+      if(d.settings){
+        state.settings.mode = d.settings.mode || 'auto';
+        state.settings.keys = Object.assign({ openrouter:'', openai:'', gemini:'' }, d.settings.keys||{});
+        state.settings.models = Object.assign({ bbang:'', chatgpt:'', gemini:'', claude:'' }, d.settings.models||{});
+      }
+      if(d.stats && typeof d.stats === 'object') state.stats = d.stats;
+      if(typeof d.sender === 'string' && (d.sender === 'boss' || AGENT_MAP[d.sender])) state.sender = d.sender;
+      if(typeof d.channel === 'string' && CHANNELS.indexOf(d.channel) >= 0) state.channel = d.channel;
+      state.seeded = !!d.seeded;
+      return true;
+    }catch(e){ return false; }
+  }
+
+  /* ============================================================
+     시간 표기
+     ============================================================ */
+  function fmtClock(ts){
+    var d = new Date(ts);
+    var h = d.getHours(), m = d.getMinutes();
+    var ap = h < 12 ? '오전' : '오후';
+    var hh = h % 12; if(hh === 0) hh = 12;
+    return ap + ' ' + hh + ':' + (m < 10 ? '0'+m : m);
+  }
+  function fmtRelative(ts){
+    if(!ts) return '아직 없음';
+    var diff = Date.now() - ts;
+    if(diff < 0) diff = 0;
+    var min = Math.floor(diff/60000);
+    if(min < 1) return '방금 전';
+    if(min < 60) return min + '분 전';
+    var hr = Math.floor(min/60);
+    if(hr < 24) return hr + '시간 전';
+    var day = Math.floor(hr/24);
+    if(day < 7) return day + '일 전';
+    var d = new Date(ts);
+    return (d.getMonth()+1) + '월 ' + d.getDate() + '일';
+  }
+  function fmtDay(ts){
+    var d = new Date(ts);
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + w + ')';
+  }
+
+  /* ============================================================
+     시드 대화
+     ============================================================ */
+  function seed(){
+    var now = Date.now();
+    var min = 60000;
+
+    state.chats['지휘실'] = [
+      { id:uid(), from:'boss', text:'작업 받은 사람은 작업하기 전에 "실행하겠습니다"라고 말하고 시작해. 내가 하는지 안 하는지 모르니까. @빵근비서 @챗GPT', ts: now - 18*min },
+      { id:uid(), from:'bbang', text:'네, 대장님! 실행하겠습니다.\n\n착수 전에 보고부터 드리고 움직이겠습니다.', ts: now - 17*min },
+      { id:uid(), from:'chatgpt', text:'네, 대장님! 실행하겠습니다.\n\n지시 → 보고 → 착수 순서로 고정했습니다.', ts: now - 16*min }
+    ];
+    state.chats['대회의실'] = [
+      { id:uid(), from:'bbang', text:'대회의실입니다, 대장님. 이번 주 안건은 여기서 크게 잡고, 실행은 지휘실에서 굴리겠습니다. 필요하시면 제가 안건 초안부터 올리겠습니다.', ts: now - 3*60*min }
+    ];
+    state.chats['라운지'] = [
+      { id:uid(), from:'gemini', text:'라운지 OPEN ☕ 편하게 들어오세요, 대장님. 잡담·아이디어·가벼운 확인은 여기서 받겠습니다.', ts: now - 5*60*min }
+    ];
+
+    state.tasks = [
+      { id:uid(), title:'12월 3일 보훈 재신검 준비물 점검', memo:'신분증·기존 판정서·진단서 챙길 목록 정리', assignee:'bbang', status:'doing', createdAt: now - 2*60*min },
+      { id:uid(), title:'이번 주 생활비·고정지출 정리', memo:'구독·통신·보험료 항목만 표로', assignee:'chatgpt', status:'todo', createdAt: now - 40*min },
+      { id:uid(), title:'산재 후유장해 관련 자료 조사', memo:'공단 기준·판례 위주로 근거 링크 포함', assignee:'gemini', status:'todo', createdAt: now - 25*min }
+    ];
+    state.notes = [
+      { id:uid(), title:'비서실 운영 규칙', body:'1. 지시받으면 착수 전에 "실행하겠습니다" 보고\n2. 결과는 이 채널에 한 번에 정리\n3. 확인이 필요한 건 한 번에 하나만 묻기', updatedAt: now - 30*min }
+    ];
+    state.stats = {};
+    state.seeded = true;
+  }
+
+  /* ============================================================
+     라우팅 / 모드
+     ============================================================ */
+  function hasKey(k){ return !!(state.settings.keys && state.settings.keys[k]); }
+
+  function resolveRoute(agent){
+    var s = state.settings;
+    var k = s.keys;
+    var model = (s.models && s.models[agent.id]) || '';
+
+    function viaOpenrouter(){ return { mode:'openrouter', key:k.openrouter, model: model || agent.defaults.openrouter, label:'OpenRouter' }; }
+    function viaOpenai(){ return { mode:'openai', key:k.openai, model: model || agent.defaults.openai, label:'OpenAI' }; }
+    function viaGemini(){ return { mode:'gemini', key:k.gemini, model: model || agent.defaults.gemini, label:'Gemini' }; }
+
+    if(s.mode === 'demo') return { mode:'demo', label:'데모' };
+
+    if(s.mode === 'openrouter'){
+      if(hasKey('openrouter')) return viaOpenrouter();
+      return { mode:'demo', label:'데모' };
+    }
+    if(s.mode === 'direct'){
+      if(agent.kind === 'gemini' && hasKey('gemini')) return viaGemini();
+      if(agent.kind === 'openai' && hasKey('openai')) return viaOpenai();
+      if(agent.kind === 'openai' && hasKey('openrouter')) return viaOpenrouter();
+      if(hasKey('openrouter')) return viaOpenrouter();
+      return { mode:'demo', label:'데모' };
+    }
+    // auto
+    if(agent.kind === 'gemini'){
+      if(hasKey('gemini')) return viaGemini();
+      if(hasKey('openrouter')) return viaOpenrouter();
+      return { mode:'demo', label:'데모' };
+    }
+    if(agent.kind === 'openai'){
+      if(hasKey('openai')) return viaOpenai();
+      if(hasKey('openrouter')) return viaOpenrouter();
+      return { mode:'demo', label:'데모' };
+    }
+    if(hasKey('openrouter')) return viaOpenrouter();
+    return { mode:'demo', label:'데모' };
+  }
+
+  function anyApi(){
+    return resolveRoute(AGENTS[0]).mode !== 'demo' ||
+           resolveRoute(AGENTS[1]).mode !== 'demo' ||
+           resolveRoute(AGENTS[2]).mode !== 'demo' ||
+           resolveRoute(AGENTS[3]).mode !== 'demo';
+  }
+  function apiCount(){
+    return AGENTS.filter(function(a){ return resolveRoute(a).mode !== 'demo'; }).length;
+  }
+
+  /* ============================================================
+     렌더: 회의실
+     ============================================================ */
+  function displayName(id){
+    if(id === 'boss') return '형근 (대장님)';
+    var a = AGENT_MAP[id];
+    return a ? a.name : id;
+  }
+
+  function renderMembers(){
+    var el = $('#memberList');
+    var html = '';
+    // 대장님
+    html += memberRow('boss');
+    AGENTS.forEach(function(a){ html += memberRow(a.id); });
+    el.innerHTML = html;
+  }
+  function memberRow(id){
+    var isBoss = id === 'boss';
+    var m = isBoss ? BOSS : AGENT_MAP[id];
+    var icon = isBoss ? '👑' : m.icon;
+    var avClass = isBoss ? 'boss' : m.avClass;
+    var st = isBoss ? '대장님' : statusOf(id).label;
+    var dotCls = isBoss ? 'green' : (statusOf(id).key === 'working' ? 'amber' : (statusOf(id).key === 'online' ? 'green' : 'gray'));
+    return '<div class="member" data-agent="'+id+'">' +
+      '<span class="av '+avClass+'">'+esc(icon)+'</span>' +
+      '<span class="m-txt"><span class="m-name">'+esc(isBoss?'형근 (대장님)':m.name)+'</span>' +
+      '<span class="m-role">'+esc(isBoss?'대장님':m.role)+'</span></span>' +
+      '<span class="m-st"><span class="dot '+dotCls+'"></span>'+esc(st)+'</span>' +
+      '</div>';
+  }
+
+  function renderChannelBar(){
+    $all('#channelPills .pill').forEach(function(b){
+      var on = b.getAttribute('data-channel') === state.channel;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var meta = CHANNEL_META[state.channel];
+    $('#channelMeta').textContent = meta.icon + ' ' + state.channel + ' · ON ' + (AGENTS.length+1) + '명';
+    var chip = $('#modeChip');
+    var apiN = apiCount();
+    if(apiN > 0){
+      chip.textContent = 'API ' + apiN + '/4 연결';
+      chip.classList.add('api');
+      chip.title = '실제 모델 API로 응답합니다.';
+    }else{
+      chip.textContent = '데모 모드';
+      chip.classList.remove('api');
+      chip.title = 'API 키를 넣으면 실제 모델이 응답합니다.';
+    }
+  }
+
+  function renderSenderChips(){
+    var el = $('#senderChips');
+    var items = [{id:'boss', label:'👑 형근 (대장님)'}].concat(AGENTS.map(function(a){
+      return { id:a.id, label:(a.icon === 'ㅂ' ? 'ㅂ' : a.icon) + ' ' + a.short };
+    }));
+    el.innerHTML = items.map(function(it){
+      return '<button class="chip'+(state.sender===it.id?' is-active':'')+'" data-sender="'+it.id+'">'+esc(it.label)+'</button>';
+    }).join('');
+  }
+
+  function renderMentionChips(){
+    var el = $('#mentionChips');
+    var items = ['@all'].concat(AGENTS.map(function(a){ return a.mention; }));
+    el.innerHTML = items.map(function(m){
+      return '<button class="chip mention" data-mention="'+esc(m)+'">'+esc(m)+'</button>';
+    }).join('');
+  }
+
+  function renderChat(){
+    var el = $('#chatScroll');
+    var list = state.chats[state.channel] || [];
+    var html = '';
+
+    if(!list.length){
+      html = '<div class="sys-note"><span>' + esc(CHANNEL_META[state.channel].desc) + ' · 아직 대화가 없습니다. 아래에 지시를 남겨보세요.</span></div>';
+    }else{
+      var lastDay = '';
+      list.forEach(function(m){
+        var day = fmtDay(m.ts);
+        if(day !== lastDay){
+          html += '<div class="day-sep"><span>'+esc(day)+'</span></div>';
+          lastDay = day;
+        }
+        if(m.kind === 'sys'){
+          html += '<div class="sys-note"><span>'+esc(m.text)+'</span></div>';
+          return;
+        }
+        html += messageHtml(m);
+      });
+    }
+    el.innerHTML = html;
+    // 진행 중 표시 복원
+    Object.keys(busy).forEach(function(id){
+      if(busy[id]) attachTyping(id);
+    });
+    scrollChatToEnd(true);
+  }
+
+  function messageHtml(m){
+    var isBoss = m.from === 'boss';
+    var id = m.from;
+    var name, role, icon, avClass;
+    if(isBoss){
+      name = '형근 (대장님)'; role = '대장님'; icon = '👑'; avClass = 'boss';
+    }else{
+      var a = AGENT_MAP[id] || { name:id, role:'', icon:'🤖', avClass:'' };
+      name = a.name; role = a.role; icon = a.icon; avClass = a.avClass;
+    }
+    return '<div class="msg '+(isBoss?'boss':'')+' enter" data-id="'+esc(m.id)+'">' +
+      '<span class="av '+avClass+'">'+esc(icon)+'</span>' +
+      '<div class="msg-body">' +
+        '<div class="msg-head"><span class="nm">'+esc(name)+'</span>' +
+          '<span class="rl">'+esc(role)+'</span>' +
+          '<span class="tm">'+esc(fmtClock(m.ts))+'</span>' +
+        '</div>' +
+        '<div class="bubble">'+linkify(esc(m.text))+'</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function linkify(escaped){
+    // 멘션 강조 (@all, @빵근비서 ...)
+    return escaped.replace(/(@(?:all|빵근비서|챗GPT|제미나이|클로드))/g, '<span class="mention">$1</span>');
+  }
+
+  function scrollChatToEnd(force){
+    var el = $('#chatScroll');
+    if(!el) return;
+    el.scrollTop = el.scrollHeight + 400;
+  }
+
+  function attachTyping(agentId){
+    var a = AGENT_MAP[agentId];
+    var el = $('#chatScroll');
+    if(!a || !el) return;
+    var existing = el.querySelector('[data-typing="'+agentId+'"]');
+    if(existing) return;
+    var div = document.createElement('div');
+    div.className = 'msg enter';
+    div.setAttribute('data-typing', agentId);
+    div.innerHTML = '<span class="av '+a.avClass+'">'+esc(a.icon)+'</span>' +
+      '<div class="msg-body"><div class="msg-head"><span class="nm">'+esc(a.name)+'</span>' +
+      '<span class="rl">'+esc(a.role)+'</span></div>' +
+      '<div class="bubble typing-bubble"><i></i><i></i><i></i></div></div>';
+    el.appendChild(div);
+    scrollChatToEnd();
+  }
+  function detachTyping(agentId){
+    var el = $('#chatScroll');
+    if(!el) return;
+    var n = el.querySelector('[data-typing="'+agentId+'"]');
+    if(n) n.remove();
+  }
+
+  /* ============================================================
+     메시지 전송
+     ============================================================ */
+  function pushMessage(channel, msg){
+    state.chats[channel].push(msg);
+    if(state.chats[channel].length > 400) state.chats[channel].splice(0, state.chats[channel].length - 400);
+  }
+
+  function currentMentions(text){
+    var found = [];
+    if(/@all\b/i.test(text) || /@all(?![가-힣])/.test(text)) found.push('all');
+    AGENTS.forEach(function(a){
+      var raw = a.mention; // @빵근비서
+      var bare = raw.slice(1);
+      var re = new RegExp('@\\s*' + bare.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i');
+      if(re.test(text)) found.push(a.id);
+    });
+    return found;
+  }
+
+  function isInstruction(text){
+    return /(해줘|해라|해\s|해$|줘|봐|봐라|알아봐|정리|확인|만들|작성|보내|찾아|계산|세팅|준비|잡아|등록|추가|삭제|고쳐|테스트|검토|비교|조사|스케줄|예약|리마인드)/.test(text);
+  }
+
+  function sendMessage(){
+    var input = $('#msgInput');
+    var text = (input.value || '').trim();
+    if(!text) return;
+
+    var sender = state.sender;
+    var channel = state.channel;
+
+    var msg = { id:uid(), from:sender, text:text, ts:Date.now() };
+    pushMessage(channel, msg);
+    input.value = '';
+    autoGrow();
+    renderChat();
+    save();
+
+    if(sender !== 'boss') return; // 대장님 발화만 비서 응답 트리거
+
+    var mentions = currentMentions(text);
+    var targets = [];
+    if(mentions.indexOf('all') >= 0){
+      targets = AGENTS.map(function(a){ return a.id; });
+    }else if(mentions.length){
+      targets = mentions.filter(function(id){ return !!AGENT_MAP[id]; });
+    }else{
+      targets = ['bbang']; // 총괄 1차 수신
+    }
+
+    if(!isInstruction(text) && !mentions.length && text.length < 12){
+      // 짧은 인사·잡담은 총괄이 짧게 받는다 (규칙 문구는 지시/멘션에만)
+      respond(channel, targets, text, { casual:true });
+      return;
+    }
+    respond(channel, targets, text, { responsiveAll: mentions.indexOf('all') >= 0 });
+  }
+
+  async function respond(channel, targetIds, userText, opts){
+    opts = opts || {};
+    for(var i=0;i<targetIds.length;i++){
+      var id = targetIds[i];
+      var history = state.chats[channel].slice();
+      var agent = AGENT_MAP[id];
+      if(!agent) continue;
+      if(busy[id]) continue;
+      busy[id] = true;
+      if(view === 'room' && channel === state.channel){
+        attachTyping(id);
+      }
+      renderStatusIfVisible();
+      renderMembers();
+
+      var route = resolveRoute(agent);
+      var result = null;
+      if(route.mode === 'demo'){
+        await sleep(420 + Math.random()*520);
+        result = { text: demoReply(agent, userText, opts), source:'demo', model:'데모 응답' };
+      }else{
+        try{
+          result = { text: await callModel(agent, route, history, userText, opts), source:route.mode, model:route.model };
+        }catch(err){
+          result = {
+            text: demoReply(agent, userText, opts),
+            source:'demo-fallback',
+            model:'데모 응답',
+            error: (err && err.message) ? err.message : 'API 호출 실패'
+          };
+        }
+      }
+
+      busy[id] = false;
+      detachTyping(id);
+      if(result.error){
+        pushMessage(channel, {
+          id: uid(),
+          kind: 'sys',
+          from: 'system',
+          text: '⚠️ ' + agent.name + ' API 호출 실패(' + String(result.error).slice(0,120) + ') — 데모 응답으로 대체했습니다. ⚙️ API 설정을 확인해 주세요.',
+          ts: Date.now()
+        });
+      }
+      var reply = {
+        id:uid(),
+        from:id,
+        text: result.text,
+        ts: Date.now(),
+        source: result.source,
+        model: result.model
+      };
+      pushMessage(channel, reply);
+      state.stats[id] = { last: reply.ts, count: ((state.stats[id] && state.stats[id].count) || 0) + 1, source: result.source, model: result.model, error: result.error || '' };
+
+      if(view !== 'room' || channel !== state.channel){
+        state.unread += 1;
+        renderUnread();
+      }
+      if(channel === state.channel) renderChat();
+      renderStatusIfVisible();
+      renderMembers();
+      save();
+      await sleep(260);
+    }
+  }
+
+  /* ============================================================
+     모델 호출
+     ============================================================ */
+  function systemPrompt(agent){
+    return '너는 "형근님 비서실"에서 김형근님(호칭: 대장님)을 보좌하는 ' + agent.role + ' "' + agent.name + '"다.\n' +
+      '- ' + agent.persona + '\n' +
+      '- 항상 한국어 존댓말(합니다체)로, 모바일 채팅에 맞게 4줄 이내로 짧게 답한다.\n' +
+      '- 지시나 멘션을 받으면 첫 문장에 반드시 "네, 대장님! 실행하겠습니다."를 넣고, 이어서 무엇을 어떻게 할지 1~3개 불릿으로 정리한다.\n' +
+      '- 확인이 필요한 것은 마지막에 한 가지만 짧게 묻는다.\n' +
+      '- 모르는 사실은 지어내지 말고 "확인해서 보고드리겠습니다"라고 말한다.\n' +
+      '- 이모지는 0~1개만 쓴다. 인사말은 짧게.';
+  }
+
+  async function callModel(agent, route, history, userText, opts){
+    if(route.mode === 'openrouter' || route.mode === 'openai'){
+      var url = route.mode === 'openrouter'
+        ? 'https://openrouter.ai/api/v1/chat/completions'
+        : 'https://api.openai.com/v1/chat/completions';
+      var headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + route.key };
+      if(route.mode === 'openrouter'){
+        headers['HTTP-Referer'] = location.origin || 'https://localhost';
+        headers['X-Title'] = 'Hyeonggeun Secretary Office';
+      }
+      var body = {
+        model: route.model,
+        messages: [{ role:'system', content: systemPrompt(agent) }].concat(buildHistoryForMessages(history, agent.id, userText)),
+        temperature: 0.7,
+        max_tokens: 500
+      };
+      var res = await fetchWithTimeout(url, {
+        method:'POST', headers:headers, body: JSON.stringify(body)
+      }, 45000);
+      if(!res.ok){
+        var errText = '';
+        try{ var ej = await res.json(); errText = (ej.error && (ej.error.message || ej.error.code)) || ''; }catch(e){}
+        throw new Error('HTTP ' + res.status + (errText ? ' · ' + errText : ''));
+      }
+      var data = await res.json();
+      var content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if(!content) throw new Error('응답 본문이 비어 있습니다.');
+      return String(content).trim();
+    }
+
+    if(route.mode === 'gemini'){
+      var url2 = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(route.model) + ':generateContent?key=' + encodeURIComponent(route.key);
+      var contents = [];
+      buildHistoryForMessages(history, agent.id, userText).forEach(function(m){
+        var role = m.role === 'assistant' ? 'model' : 'user';
+        if(contents.length && contents[contents.length-1].role === role){
+          contents[contents.length-1].parts[0].text += '\n' + m.content;
+        }else{
+          contents.push({ role: role, parts:[{ text:m.content }] });
+        }
+      });
+      var body2 = {
+        system_instruction: { parts: [{ text: systemPrompt(agent) }] },
+        contents: contents,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 600 }
+      };
+      var res2 = await fetchWithTimeout(url2, {
+        method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body2)
+      }, 45000);
+      if(!res2.ok){
+        var t2 = '';
+        try{ var e2 = await res2.json(); t2 = (e2.error && e2.error.message) || ''; }catch(e){}
+        throw new Error('HTTP ' + res2.status + (t2 ? ' · ' + t2 : ''));
+      }
+      var d2 = await res2.json();
+      var cand = d2 && d2.candidates && d2.candidates[0];
+      var parts = cand && cand.content && cand.content.parts;
+      var out = parts ? parts.map(function(p){ return p.text || ''; }).join('').trim() : '';
+      if(!out) throw new Error('응답 본문이 비어 있습니다.');
+      return out;
+    }
+    throw new Error('지원하지 않는 연결 방식입니다.');
+  }
+
+  function buildHistoryForMessages(history, agentId, userText){
+    var list = history.filter(function(m){ return m.kind !== 'sys'; });
+    var recent = list.slice(-10);
+    var last = recent[recent.length - 1];
+    var msgs = recent.map(function(m){
+      var isSelf = m.from === agentId;
+      var text = String(m.text || '');
+      if(text.length > 1400) text = text.slice(0,1400) + '…';
+      return {
+        role: isSelf ? 'assistant' : 'user',
+        content: (m.from === 'boss' ? '대장님: ' : (displayName(m.from) + ': ')) + text
+      };
+    });
+    // 방금 보낸 대장님 메시지가 마지막이 아니면(다른 비서 응답 뒤) 한 번만 덧붙인다
+    if(!last || last.from !== 'boss' || String(last.text||'').trim() !== String(userText||'').trim()){
+      msgs.push({ role:'user', content: '대장님: ' + userText });
+    }
+    return msgs;
+  }
+
+  function fetchWithTimeout(url, options, ms){
+    var ctrl = new AbortController();
+    var t = setTimeout(function(){ ctrl.abort(); }, ms);
+    return fetch(url, Object.assign({}, options, { signal: ctrl.signal }))
+      .then(function(r){ clearTimeout(t); return r; })
+      .catch(function(e){ clearTimeout(t); throw e; });
+  }
+
+  /* ============================================================
+     데모 응답 엔진
+     ============================================================ */
+  function shortTopic(text){
+    var t = String(text).replace(/@\S+/g,'').replace(/\s+/g,' ').trim();
+    t = t.replace(/(해\s*주세요|해줘요|해줘|해라|해|줘|주세요|부탁해요|부탁해|부탁드립니다)[.!?~\s]*$/,'').trim();
+    if(!t) t = '말씀하신 건';
+    if(t.length > 34) t = t.slice(0,34) + '…';
+    return t;
+  }
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function demoReply(agent, text, opts){
+    var topic = shortTopic(text);
+    var casual = !!(opts && opts.casual);
+    var head = '네, 대장님! 실행하겠습니다.';
+
+    if(casual){
+      var casuals = {
+        bbang: ['네, 대장님! 부르셨습니까. 필요한 것만 말씀해 주시면 바로 움직이겠습니다.', '네, 대장님! 여기 있습니다. 오늘은 무엇부터 챙길까요?'],
+        chatgpt: ['네, 대장님! 준비돼 있습니다. 정리할 거리 있으면 바로 던져 주십시오.', '네, 대장님! 기획이든 정리든 말씀만 주십시오.'],
+        gemini: ['네, 대장님! 조사할 거리 있으면 바로 달려가겠습니다. ✨', '네, 대장님! 궁금한 것 하나만 주셔도 근거까지 찾아오겠습니다.'],
+        claude: ['네, 대장님! 문서든 코드든 말씀만 주십시오.', '네, 대장님! 바로 착수하겠습니다. 범위만 알려주십시오.']
+      };
+      return pick(casuals[agent.id] || ['네, 대장님! 말씀하십시오.']);
+    }
+
+    var body = '';
+    if(agent.id === 'bbang'){
+      body = pick([
+        '· ' + topic + ' — 제가 일정과 서류까지 한 번에 챙기겠습니다.\n· 오늘 안에 1차 정리본을 이 채널에 올리고, 확인 필요하면 그때 여쭙겠습니다.',
+        '· ' + topic + ' — 순서대로 정리해 오늘 안에 착수하겠습니다.\n· 진행은 단계마다 이 지휘실에 보고드리겠습니다.'
+      ]);
+      body += '\n\n기준으로 삼을 마감이나 예산만 알려주시면 그대로 맞추겠습니다.';
+    }else if(agent.id === 'chatgpt'){
+      body = pick([
+        '· 목표: ' + topic + '\n· 1) 핵심 항목 3개로 쪼개기  2) 우선순위 표시  3) 실행 순서 확정\n· 정리본은 표 형태로 올려드리겠습니다.',
+        '· ' + topic + ' → 안건 구조화부터 하겠습니다.\n· 결정이 필요한 지점과 그냥 진행해도 되는 지점을 나눠서 정리하겠습니다.'
+      ]);
+      body += '\n\n먼저 결론부터 볼까요, 근거부터 볼까요?';
+    }else if(agent.id === 'gemini'){
+      body = pick([
+        '· ' + topic + ' — 공식 자료 위주로 조사하겠습니다.\n· 근거 링크와 숫자를 함께 정리해 30분 안에 보고드리겠습니다.',
+        '· ' + topic + ' — 비교 기준 3개를 잡고 최신 자료로 확인하겠습니다.\n· 출처가 약한 내용은 따로 표시해 두겠습니다.'
+      ]);
+      body += '\n\n조사 범위를 국내로 좁출까요, 해외까지 볼까요?';
+    }else{
+      body = pick([
+        '· ' + topic + ' — 문서 초안부터 잡겠습니다.\n· 문장은 짧게, 군더더기 없이 정리해 바로 쓰실 수 있게 올리겠습니다.',
+        '· ' + topic + ' — 코드/문서 형태는 붙여 넣으면 바로 동작하도록 준비하겠습니다.\n· 먼저 초안 한 장을 올리고 방향을 확인받겠습니다.'
+      ]);
+      body += '\n\n말투는 담백하게 갈까요, 조금 더 단단하게 갈까요?';
+    }
+    return head + '\n\n' + body;
+  }
+
+  /* ============================================================
+     렌더: 작업실
+     ============================================================ */
+  var TASK_LABEL = { todo:'대기', doing:'진행중', done:'완료' };
+
+  function renderTaskAssigneeOptions(){
+    var sel = $('#taskAssignee');
+    var cur = sel.value;
+    sel.innerHTML = AGENTS.map(function(a){
+      return '<option value="'+a.id+'">'+esc(a.icon === 'ㅂ' ? 'ㅂ' : a.icon) + ' ' + esc(a.short)+'</option>';
+    }).join('');
+    if(cur && AGENT_MAP[cur]) sel.value = cur;
+  }
+
+  function renderTasks(){
+    var board = $('#taskBoard');
+    var cols = [
+      { key:'todo', title:'대기' },
+      { key:'doing', title:'진행중' },
+      { key:'done', title:'완료' }
+    ];
+    var counts = { todo:0, doing:0, done:0 };
+    state.tasks.forEach(function(t){ if(counts[t.status] != null) counts[t.status]++; });
+
+    board.innerHTML = cols.map(function(c){
+      var items = state.tasks.filter(function(t){ return t.status === c.key; })
+        .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+      return '<div class="col" data-status="'+c.key+'">' +
+        '<div class="col-head"><span class="t">'+c.title+'</span><span class="n">'+items.length+'</span></div>' +
+        (items.length ? items.map(taskHtml).join('') : '<div class="empty">비어 있음</div>') +
+        '</div>';
+    }).join('');
+
+    $('#taskSummary').textContent = '대기 ' + counts.todo + ' · 진행 ' + counts.doing + ' · 완료 ' + counts.done;
+    bindTaskDrag();
+  }
+
+  function taskHtml(t){
+    var a = AGENT_MAP[t.assignee];
+    var acts = '';
+    if(t.status === 'todo') acts += '<button class="mini-btn primary" data-act="advance" data-id="'+esc(t.id)+'">▶ 시작</button>';
+    if(t.status === 'doing'){
+      acts += '<button class="mini-btn green" data-act="advance" data-id="'+esc(t.id)+'">✓ 완료</button>';
+      acts += '<button class="mini-btn" data-act="back" data-id="'+esc(t.id)+'">↩ 대기</button>';
+    }
+    if(t.status === 'done') acts += '<button class="mini-btn" data-act="back" data-id="'+esc(t.id)+'">↩ 진행중</button>';
+    acts += '<button class="mini-btn danger" data-act="del" data-id="'+esc(t.id)+'">삭제</button>';
+
+    return '<div class="task '+(t.status==='done'?'done':'')+'" draggable="true" data-id="'+esc(t.id)+'">' +
+      '<div class="tt">'+esc(t.title)+'</div>' +
+      (t.memo ? '<div class="tm">'+esc(t.memo)+'</div>' : '') +
+      '<div class="meta">' +
+        (a ? '<span class="who">'+esc(a.icon === 'ㅂ' ? 'ㅂ' : a.icon)+' '+esc(a.short)+'</span>' : '') +
+        '<span class="when">'+esc(fmtRelative(t.createdAt))+'</span>' +
+      '</div>' +
+      '<div class="acts">'+acts+'</div>' +
+    '</div>';
+  }
+
+  function bindTaskDrag(){
+    $all('.task', $('#taskBoard')).forEach(function(el){
+      el.addEventListener('dragstart', function(e){
+        e.dataTransfer.setData('text/plain', el.getAttribute('data-id'));
+        e.dataTransfer.effectAllowed = 'move';
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', function(){ el.classList.remove('dragging'); });
+    });
+    $all('.col', $('#taskBoard')).forEach(function(col){
+      col.addEventListener('dragover', function(e){ e.preventDefault(); col.classList.add('is-drop'); });
+      col.addEventListener('dragleave', function(){ col.classList.remove('is-drop'); });
+      col.addEventListener('drop', function(e){
+        e.preventDefault(); col.classList.remove('is-drop');
+        var id = e.dataTransfer.getData('text/plain');
+        var status = col.getAttribute('data-status');
+        var t = state.tasks.filter(function(x){ return x.id === id; })[0];
+        if(t && t.status !== status){
+          t.status = status;
+          renderTasks(); renderStatusIfVisible(); save();
+          toast('작업을 ' + TASK_LABEL[status] + '으로 옮겼습니다.');
+        }
+      });
+    });
+  }
+
+  /* ============================================================
+     렌더: 비서현황
+     ============================================================ */
+  function statusOf(id){
+    if(busy[id]) return { key:'working', label:'작업중' };
+    var doing = state.tasks.some(function(t){ return t.assignee === id && t.status === 'doing'; });
+    if(doing) return { key:'working', label:'작업중' };
+    var st = state.stats[id];
+    if(st && st.last && (Date.now() - st.last) < 10*60*1000) return { key:'online', label:'온라인' };
+    return { key:'idle', label:'대기' };
+  }
+
+  function renderStatus(){
+    var apiN = apiCount();
+    var doingN = state.tasks.filter(function(t){ return t.status==='doing'; }).length;
+    var doneN = state.tasks.filter(function(t){ return t.status==='done'; }).length;
+    var msgN = CHANNELS.reduce(function(s,c){ return s + (state.chats[c]||[]).length; }, 0);
+
+    $('#statusKpi').innerHTML =
+      kpi('연결 모드', apiN ? ('API ' + apiN + '/4') : '데모', apiN ? '실제 모델 호출' : '키 없이 체험') +
+      kpi('진행 작업', doingN + '', '대기 ' + state.tasks.filter(function(t){return t.status==='todo';}).length + ' · 완료 ' + doneN) +
+      kpi('누적 메시지', msgN + '', '3개 채널 합계') +
+      kpi('메모', state.notes.length + '', '이 브라우저에 저장');
+
+    $('#agentGrid').innerHTML = AGENTS.map(function(a){
+      var route = resolveRoute(a);
+      var st = statusOf(a.id);
+      var stat = state.stats[a.id] || {};
+      var srcLabel = route.mode === 'demo' ? '데모 모드' : route.label + ' · ' + route.model;
+      var acts = '<div class="agent-actions">' +
+        '<button class="mini-btn" data-agent-msg="'+a.id+'">💬 지목해서 지시</button>' +
+        (route.mode === 'demo' ? '<button class="mini-btn primary" data-agent-setup="1">🔑 키 연결</button>' : '<button class="mini-btn" data-agent-test="'+a.id+'">🔌 테스트</button>') +
+      '</div>';
+      return '<div class="agent-card">' +
+        '<div class="agent-top"><span class="av '+a.avClass+'">'+esc(a.icon)+'</span>' +
+          '<div><div class="a-name">'+esc(a.name)+'</div><div class="a-role">'+esc(a.role)+'</div></div>' +
+          '<span class="a-st '+st.key+'">'+esc(st.label)+'</span>' +
+        '</div>' +
+        '<div class="kv"><span class="k">모델</span><span class="v mono" title="'+esc(srcLabel)+'">'+esc(srcLabel)+'</span></div>' +
+        '<div class="kv"><span class="k">최근 응답</span><span class="v">'+esc(fmtRelative(stat.last))+'</span></div>' +
+        '<div class="kv"><span class="k">응답 횟수</span><span class="v">'+((stat.count||0))+'회'+(stat.source==='demo-fallback'?' · 데모 대체':'')+'</span></div>' +
+        acts +
+      '</div>';
+    }).join('');
+  }
+  function kpi(k,v,s){
+    return '<div class="kpi"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div>' +
+      (s ? '<div class="k" style="margin-top:4px;font-weight:700;color:#B3A38C">'+esc(s)+'</div>' : '') + '</div>';
+  }
+  function renderStatusIfVisible(){
+    if(view === 'status'){
+      // 상태 카드만 갱신 (입력 중 포커스 유지)
+      var scrollTop = $('.view-scroll', $('[data-view="status"]')).scrollTop;
+      renderStatus();
+      $('.view-scroll', $('[data-view="status"]')).scrollTop = scrollTop;
+    }
+  }
+
+  /* ============================================================
+     렌더: 메모
+     ============================================================ */
+  function renderNotes(){
+    var el = $('#notesList');
+    var list = state.notes.slice().sort(function(a,b){ return (b.updatedAt||0) - (a.updatedAt||0); });
+    $('#noteCount').textContent = state.notes.length + '개';
+    if(!list.length){
+      el.innerHTML = '<div class="empty" style="grid-column:1/-1">아직 메모가 없습니다. 위에서 첫 메모를 남겨보세요.</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(n){
+      return '<div class="note" data-id="'+esc(n.id)+'">' +
+        '<input class="n-title" value="'+esc(n.title)+'" maxlength="80" aria-label="메모 제목">' +
+        '<textarea class="n-body" aria-label="메모 내용" rows="2">'+esc(n.body||'')+'</textarea>' +
+        '<div class="n-foot"><span class="n-time">'+esc(fmtRelative(n.updatedAt))+' 수정</span>' +
+          '<span class="n-acts"><button class="mini-btn danger" data-note-del="'+esc(n.id)+'">삭제</button></span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    fitNoteTextareas(el);
+  }
+
+  function fitNoteTextareas(root){
+    $all('.n-body', root).forEach(function(ta){
+      ta.style.height = 'auto';
+      ta.style.height = Math.max(52, ta.scrollHeight) + 'px';
+    });
+  }
+
+  /* ============================================================
+     탭 / 뷰
+     ============================================================ */
+  function setView(v){
+    view = v;
+    $all('.tab').forEach(function(b){
+      var on = b.getAttribute('data-view') === v;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $all('.view').forEach(function(s){
+      s.classList.toggle('is-active', s.getAttribute('data-view') === v);
+    });
+    if(v === 'room'){ state.unread = 0; renderUnread(); scrollChatToEnd(); }
+    if(v === 'tasks'){ renderTaskAssigneeOptions(); renderTasks(); }
+    if(v === 'status') renderStatus();
+    if(v === 'notes') renderNotes();
+  }
+  function renderUnread(){
+    var b = $('#roomBadge');
+    if(state.unread > 0){ b.textContent = state.unread > 9 ? '9+' : String(state.unread); b.classList.add('show'); }
+    else b.classList.remove('show');
+  }
+
+  /* ============================================================
+     토스트
+     ============================================================ */
+  function toast(msg){
+    var wrap = $('#toastWrap');
+    var offset = 24;
+    if(!$('#settingsModal').hidden){
+      offset = 92;
+    }else if(view === 'room'){
+      var comp = $('.composer');
+      if(comp){ offset = Math.max(16, window.innerHeight - comp.getBoundingClientRect().top + 10); }
+    }
+    wrap.style.bottom = offset + 'px';
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(function(){ el.classList.add('out'); }, 2100);
+    setTimeout(function(){ el.remove(); }, 2500);
+  }
+
+  /* ============================================================
+     입력창
+     ============================================================ */
+  function autoGrow(){
+    var t = $('#msgInput');
+    t.style.height = 'auto';
+    t.style.height = Math.min(t.scrollHeight, 104) + 'px';
+    $('#btnSend').disabled = !t.value.trim();
+  }
+  function insertAtCursor(text){
+    var t = $('#msgInput');
+    var s = t.selectionStart || 0, e = t.selectionEnd || 0;
+    var v = t.value;
+    var needSpace = (s > 0 && v[s-1] !== ' ' && v[s-1] !== '\n');
+    var ins = (needSpace ? ' ' : '') + text + ' ';
+    t.value = v.slice(0,s) + ins + v.slice(e);
+    var pos = s + ins.length;
+    t.focus();
+    t.setSelectionRange(pos, pos);
+    autoGrow();
+  }
+
+  /* ============================================================
+     설정 모달
+     ============================================================ */
+  function openSettings(){
+    var s = state.settings;
+    $('#keyOpenrouter').value = s.keys.openrouter || '';
+    $('#keyOpenai').value = s.keys.openai || '';
+    $('#keyGemini').value = s.keys.gemini || '';
+    setModeSeg(s.mode);
+    renderModelRows();
+    $('#testResult').textContent = '아직 테스트하지 않았습니다.';
+    $('#testResult').className = 'test-result';
+    $('#settingsModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSettings(){
+    $('#settingsModal').hidden = true;
+    document.body.style.overflow = '';
+  }
+  function setModeSeg(mode){
+    $all('#modeSeg button').forEach(function(b){
+      b.classList.toggle('is-active', b.getAttribute('data-mode') === mode);
+    });
+    var desc = {
+      auto:'자동: 입력된 키를 우선 사용하고, 없으면 데모로 응답합니다.',
+      openrouter:'OpenRouter 키 하나로 빵근·챗GPT·제미나이·클로드 전부 실제 모델을 호출합니다.',
+      direct:'개별 키: OpenAI 키는 빵근·챗GPT, Gemini 키는 제미나이가 사용합니다. 클로드는 OpenRouter 키가 필요합니다.',
+      demo:'데모: 키 없이 성격에 맞는 예시 응답으로 동작합니다.'
+    };
+    $('#modeDesc').textContent = desc[mode] || desc.auto;
+  }
+  function renderModelRows(){
+    var html = '';
+    AGENTS.forEach(function(a){
+      var cur = state.settings.models[a.id] || '';
+      var ph = (state.settings.mode === 'openrouter') ? a.defaults.openrouter
+             : (a.kind === 'gemini' ? (state.settings.keys.gemini ? a.defaults.gemini : a.defaults.openrouter) : a.defaults.openai);
+      html += '<div class="m-row"><span class="mn">'+esc(a.icon === 'ㅂ' ? 'ㅂ' : a.icon)+' '+esc(a.short)+'</span>' +
+        '<input type="text" data-model="'+a.id+'" value="'+esc(cur)+'" placeholder="'+esc(ph)+'" spellcheck="false"></div>';
+    });
+    $('#modelRows').innerHTML = html;
+  }
+
+  async function testConnection(){
+    var res = $('#testResult');
+    res.className = 'test-result';
+    res.textContent = '테스트 중…';
+
+    // 저장 전 입력값 기준으로 임시 반영
+    var temp = clone(state.settings);
+    temp.keys = {
+      openrouter: $('#keyOpenrouter').value.trim(),
+      openai: $('#keyOpenai').value.trim(),
+      gemini: $('#keyGemini').value.trim()
+    };
+    temp.models = {};
+    $all('[data-model]').forEach(function(i){ temp.models[i.getAttribute('data-model')] = i.value.trim(); });
+    var saved = state.settings;
+    state.settings = temp;
+
+    try{
+      var tried = 0, ok = [], fail = [];
+      for(var i=0;i<AGENTS.length;i++){
+        var a = AGENTS[i];
+        var route = resolveRoute(a);
+        if(route.mode === 'demo') continue;
+        tried++;
+        try{
+          var out = await testOne(a, route);
+          ok.push(a.short + ' OK(' + (out ? '응답 ' + out.length + '자' : '연결됨') + ')');
+        }catch(e){
+          fail.push(a.short + ' 실패: ' + (e && e.message ? e.message : '오류'));
+        }
+      }
+      state.settings = saved;
+      if(!tried){
+        res.className = 'test-result err';
+        res.textContent = '입력된 키가 없습니다. OpenRouter 또는 OpenAI/Gemini 키를 넣고 다시 시도하세요.';
+        return;
+      }
+      if(fail.length){
+        res.className = 'test-result err';
+        res.textContent = '실패 ' + fail.length + ' / 성공 ' + ok.length + ' — ' + fail.join(' | ');
+      }else{
+        res.className = 'test-result ok';
+        res.textContent = '연결 성공 — ' + ok.join(' · ');
+      }
+    }catch(e){
+      state.settings = saved;
+      res.className = 'test-result err';
+      res.textContent = '테스트 중 오류: ' + (e && e.message ? e.message : e);
+    }
+  }
+  async function testOne(agent, route){
+    if(route.mode === 'openrouter' || route.mode === 'openai'){
+      var url = route.mode === 'openrouter' ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+      var headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + route.key };
+      if(route.mode === 'openrouter'){
+        headers['HTTP-Referer'] = location.origin || 'https://localhost';
+        headers['X-Title'] = 'Hyeonggeun Secretary Office';
+      }
+      var r = await fetchWithTimeout(url, { method:'POST', headers:headers, body: JSON.stringify({
+        model: route.model, messages:[{ role:'user', content:'한국어로 "연결 확인"이라고만 답하세요.' }], max_tokens: 20, temperature: 0
+      })}, 30000);
+      if(!r.ok){
+        var m = ''; try{ var j = await r.json(); m = (j.error && (j.error.message||j.error.code)) || ''; }catch(e){}
+        throw new Error('HTTP '+r.status+(m?' · '+m:''));
+      }
+      var d = await r.json();
+      var c = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if(!c) throw new Error('응답 없음');
+      return c;
+    }
+    if(route.mode === 'gemini'){
+      var u = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(route.model) + ':generateContent?key=' + encodeURIComponent(route.key);
+      var r2 = await fetchWithTimeout(u, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+        contents:[{role:'user', parts:[{text:'한국어로 "연결 확인"이라고만 답하세요.'}]}],
+        generationConfig:{ temperature:0, maxOutputTokens:20 }
+      })}, 30000);
+      if(!r2.ok){
+        var m2 = ''; try{ var j2 = await r2.json(); m2 = (j2.error && j2.error.message) || ''; }catch(e){}
+        throw new Error('HTTP '+r2.status+(m2?' · '+m2:''));
+      }
+      var d2 = await r2.json();
+      var p = d2 && d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts;
+      var t = p ? p.map(function(x){return x.text||'';}).join('') : '';
+      if(!t) throw new Error('응답 없음');
+      return t;
+    }
+    throw new Error('데모 모드');
+  }
+
+  /* ============================================================
+     이벤트 바인딩
+     ============================================================ */
+  function bind(){
+    // 탭
+    $all('.tab').forEach(function(b){
+      b.addEventListener('click', function(){ setView(b.getAttribute('data-view')); });
+    });
+
+    // 채널
+    $('#channelPills').addEventListener('click', function(e){
+      var b = e.target.closest('.pill');
+      if(!b) return;
+      state.channel = b.getAttribute('data-channel');
+      renderChannelBar();
+      renderChat();
+      save();
+    });
+
+    // 발신자
+    $('#senderChips').addEventListener('click', function(e){
+      var b = e.target.closest('[data-sender]');
+      if(!b) return;
+      state.sender = b.getAttribute('data-sender');
+      renderSenderChips();
+      var a = AGENT_MAP[state.sender];
+      $('#msgInput').placeholder = state.sender === 'boss'
+        ? '지시를 입력하세요. @멘션하면 그 비서가 먼저 답합니다.'
+        : (a ? a.short + ' 비서로 발화합니다. (응답 자동 생성은 대장님 발화에만 동작)' : '메시지를 입력하세요.');
+      save();
+    });
+
+    // 멘션
+    $('#mentionChips').addEventListener('click', function(e){
+      var b = e.target.closest('[data-mention]');
+      if(!b) return;
+      insertAtCursor(b.getAttribute('data-mention'));
+    });
+
+    // 입력
+    var input = $('#msgInput');
+    input.addEventListener('input', autoGrow);
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){
+        e.preventDefault();
+        sendMessage();
+      }
+      if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); sendMessage(); }
+    });
+    $('#btnSend').addEventListener('click', sendMessage);
+
+    // 비우기
+    $('#btnClearChat').addEventListener('click', function(){
+      if(!state.chats[state.channel].length){ toast('이미 비어 있습니다.'); return; }
+      if(confirm('[' + state.channel + '] 대화를 모두 지울까요? 되돌릴 수 없습니다.')){
+        state.chats[state.channel] = [];
+        renderChat(); save(); toast('대화를 비웠습니다.');
+      }
+    });
+
+    // 작업실
+    var taskTitle = $('#taskTitle');
+    var taskForm = $('#taskForm');
+    taskForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      var title = taskTitle.value.trim();
+      if(!title) return;
+      state.tasks.push({
+        id: uid(),
+        title: title,
+        memo: $('#taskMemo').value.trim(),
+        assignee: $('#taskAssignee').value || 'bbang',
+        status: 'todo',
+        createdAt: Date.now()
+      });
+      taskTitle.value = ''; $('#taskMemo').value = '';
+      renderTasks(); renderStatusIfVisible(); save();
+      toast('작업을 추가했습니다.');
+      taskTitle.focus();
+    });
+
+    $('#taskBoard').addEventListener('click', function(e){
+      var b = e.target.closest('[data-act]');
+      if(!b) return;
+      var id = b.getAttribute('data-id');
+      var act = b.getAttribute('data-act');
+      var t = state.tasks.filter(function(x){ return x.id === id; })[0];
+      if(!t) return;
+      if(act === 'del'){
+        if(!confirm('작업 "' + t.title + '"을(를) 삭제할까요?')) return;
+        state.tasks = state.tasks.filter(function(x){ return x.id !== id; });
+        toast('작업을 삭제했습니다.');
+      }else if(act === 'advance'){
+        t.status = t.status === 'todo' ? 'doing' : 'done';
+        toast('작업을 ' + TASK_LABEL[t.status] + '(으)로 옮겼습니다.');
+      }else if(act === 'back'){
+        t.status = t.status === 'done' ? 'doing' : 'todo';
+        toast('작업을 ' + TASK_LABEL[t.status] + '(으)로 되돌렸습니다.');
+      }
+      renderTasks(); renderStatusIfVisible(); save();
+    });
+
+    // 메모
+    $('#noteForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var title = $('#noteTitle').value.trim();
+      if(!title) return;
+      state.notes.push({ id:uid(), title:title, body:$('#noteBody').value.trim(), updatedAt:Date.now() });
+      $('#noteTitle').value = ''; $('#noteBody').value = '';
+      renderNotes(); save();
+      toast('메모를 저장했습니다.');
+      $('#noteTitle').focus();
+    });
+    $('#notesList').addEventListener('input', function(e){
+      var card = e.target.closest('.note'); if(!card) return;
+      var id = card.getAttribute('data-id');
+      var n = state.notes.filter(function(x){ return x.id === id; })[0]; if(!n) return;
+      if(e.target.classList.contains('n-title')) n.title = e.target.value;
+      if(e.target.classList.contains('n-body')){ n.body = e.target.value; e.target.style.height='auto'; e.target.style.height = Math.max(52, e.target.scrollHeight)+'px'; }
+      n.updatedAt = Date.now();
+      save();
+      var ft = card.querySelector('.n-time');
+      if(ft) ft.textContent = '방금 전 수정';
+    });
+    $('#notesList').addEventListener('click', function(e){
+      var b = e.target.closest('[data-note-del]');
+      if(!b) return;
+      var id = b.getAttribute('data-note-del');
+      var n = state.notes.filter(function(x){ return x.id === id; })[0];
+      if(!n) return;
+      if(!confirm('메모 "' + n.title + '"을(를) 삭제할까요?')) return;
+      state.notes = state.notes.filter(function(x){ return x.id !== id; });
+      renderNotes(); save(); toast('메모를 삭제했습니다.');
+    });
+
+    // 비서현황 카드 액션
+    $('#agentGrid').addEventListener('click', function(e){
+      var msg = e.target.closest('[data-agent-msg]');
+      if(msg){
+        var id = msg.getAttribute('data-agent-msg');
+        var a = AGENT_MAP[id];
+        setView('room');
+        state.sender = 'boss';
+        renderSenderChips();
+        insertAtCursor(a.mention);
+        return;
+      }
+      if(e.target.closest('[data-agent-setup]')){ openSettings(); return; }
+      var tb = e.target.closest('[data-agent-test]');
+      if(tb){
+        var aid = tb.getAttribute('data-agent-test');
+        var ag = AGENT_MAP[aid];
+        var route = resolveRoute(ag);
+        tb.textContent = '테스트 중…';
+        testOne(ag, route).then(function(){
+          toast(ag.short + ' 연결 성공');
+          tb.textContent = '🔌 테스트';
+        }).catch(function(err){
+          toast(ag.short + ' 실패: ' + (err.message||'오류'));
+          tb.textContent = '🔌 테스트';
+        });
+      }
+    });
+    $('#btnGoSettings').addEventListener('click', openSettings);
+
+    // 설정 모달
+    $('#btnSettings').addEventListener('click', openSettings);
+    $('#btnCloseSettings').addEventListener('click', closeSettings);
+    $('#btnCloseSettings2').addEventListener('click', closeSettings);
+    $('#settingsModal').addEventListener('click', function(e){
+      if(e.target === $('#settingsModal')) closeSettings();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape' && !$('#settingsModal').hidden) closeSettings();
+    });
+
+    $('#modeSeg').addEventListener('click', function(e){
+      var b = e.target.closest('[data-mode]');
+      if(!b) return;
+      state.settings.mode = b.getAttribute('data-mode');
+      setModeSeg(state.settings.mode);
+      renderModelRows();
+    });
+
+    $all('.pw-toggle').forEach(function(b){
+      b.addEventListener('click', function(){
+        var inp = $('#' + b.getAttribute('data-target'));
+        if(!inp) return;
+        var isPw = inp.type === 'password';
+        inp.type = isPw ? 'text' : 'password';
+        b.textContent = isPw ? '숨기기' : '보기';
+      });
+    });
+
+    $('#btnTest').addEventListener('click', testConnection);
+
+    $('#btnSaveSettings').addEventListener('click', function(){
+      state.settings.keys.openrouter = $('#keyOpenrouter').value.trim();
+      state.settings.keys.openai = $('#keyOpenai').value.trim();
+      state.settings.keys.gemini = $('#keyGemini').value.trim();
+      state.settings.models = {};
+      $all('[data-model]').forEach(function(i){ state.settings.models[i.getAttribute('data-model')] = i.value.trim(); });
+      save();
+      renderChannelBar();
+      renderStatusIfVisible();
+      toast(anyApi() ? ('API ' + apiCount() + '명 연결됨') : '데모 모드로 저장했습니다.');
+      closeSettings();
+    });
+
+    $('#btnReset').addEventListener('click', function(){
+      if(!confirm('대화·작업·메모·API 키를 모두 지우고 처음 상태로 돌아갈까요?\n(되돌릴 수 없습니다)')) return;
+      try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+      location.reload();
+    });
+
+    // 온라인 상태
+    window.addEventListener('online', updateLive);
+    window.addEventListener('offline', updateLive);
+
+    // 스크롤 위치 유지용 리사이즈
+    window.addEventListener('resize', function(){ if(view==='room') scrollChatToEnd(); });
+  }
+
+  function updateLive(){
+    var b = $('#liveBadge');
+    var on = navigator.onLine !== false;
+    b.classList.toggle('off', !on);
+    b.innerHTML = '<span class="dot"></span>' + (on ? '실시간 연결' : '오프라인');
+    b.title = on ? '연결됨' : '인터넷 연결이 끊겼습니다. (데모 응답은 계속 동작)';
+  }
+
+  /* ============================================================
+     시작
+     ============================================================ */
+  function init(){
+    var had = load();
+    if(!had || !state.seeded){
+      if(!had){ seed(); }
+      state.seeded = true;
+    }
+    renderMembers();
+    renderChannelBar();
+    renderSenderChips();
+    renderMentionChips();
+    renderChat();
+    renderUnread();
+    renderTaskAssigneeOptions();
+    renderTasks();
+    renderStatus();
+    renderNotes();
+    setView('room');
+    bind();
+    autoGrow();
+    updateLive();
+    save();
+
+    // 첫 실행 환영
+    if(!had){
+      setTimeout(function(){
+        toast('형근님 비서실에 오신 것을 환영합니다. ⚙️에서 API 키를 넣으면 실제 모델이 응답합니다.');
+      }, 700);
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{
+    init();
+  }
+})();
+</script>
+<script>
+  // PWA: 서비스 워커 등록 (오프라인 캐시 · 홈 화면 앱 설치용)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+</script>
+</body>
+</html>
