@@ -1229,13 +1229,20 @@
     }
 
     if(s.mode === 'direct'){
-      // 개별 키: 비서에 맞는 전용 키를 먼저, 없으면 입력된 다른 키로 대체
+      // 개별 키: 비서에 맞는 전용 키를 먼저, 그 키가 없으면 Gemini 키로 대체(AIza…·AQ…)
       if(agent.kind === 'gemini' && has('gemini')) return viaGemini();
-      if(agent.kind === 'openai' && has('openai')) return viaOpenai();
-      if(agent.kind === 'openrouter' && has('openrouter')) return viaOpenrouter();
+      if(agent.kind === 'openai'){
+        if(has('openai')) return viaOpenai();
+        if(has('gemini')) return viaGemini();
+        return demo();
+      }
+      if(agent.kind === 'openrouter'){
+        if(has('openrouter')) return viaOpenrouter();
+        if(has('gemini')) return viaGemini();
+        return demo();
+      }
       if(has('openrouter')) return viaOpenrouter();
-      if(has('gemini')) return viaGemini();   // Gemini 키 하나만 있어도 4명 전원 실제 응답
-      if(has('openai')) return viaOpenai();
+      if(has('gemini')) return viaGemini();
       return demo();
     }
 
@@ -2379,7 +2386,7 @@
     var desc = {
       auto:'자동: Gemini 키 하나만 있어도 4명 비서 전원이 실제 AI(각자 역할·말투)로 응답합니다. OpenRouter·OpenAI 키가 있으면 그 키를 먼저 씁니다.',
       openrouter:'OpenRouter 키 하나로 빵근·챗GPT·제미나이·클로드 전부 실제 모델을 호출합니다.',
-      direct:'개별 키: 각 비서에 맞는 키를 먼저 쓰고, 없으면 입력된 다른 키로 대체합니다. Gemini 키만 있어도 4명 전원이 Gemini로 응답합니다.',
+      direct:'개별 키: 각 비서에 맞는 키를 먼저 쓰고, 그 키가 없으면 Gemini 키로 대체합니다. Gemini 키 하나면 4명 전원이 응답합니다.',
       demo:'데모: 키 없이 성격에 맞는 예시 응답으로 동작합니다.'
     };
     $('#modeDesc').textContent = desc[mode] || desc.auto;
